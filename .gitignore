@@ -1,0 +1,33 @@
+# Claude Code workspace (local skills/config) — never committed
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+
+# Sentinel runtime data (SQLite DB, generated reports, logs, live config)
+data/
+config/sentinel.yaml
+config/sentinel.env
+*.db
+*.db-wal
+*.db-shm
+*.log
+*.pid
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Playwright screenshots scratch
+screenshots/tmp/

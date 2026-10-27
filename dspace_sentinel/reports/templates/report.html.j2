@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ meta.title }}</title>
+<meta name="generator" content="DSpace Sentinel {{ meta.sentinel_version }}">
+<meta name="color-scheme" content="light dark">
+<style>
+:root {
+  color-scheme: light dark;
+  --s1: 4px; --s2: 8px; --s3: 16px; --s4: 24px; --s5: 32px; --s6: 48px;
+  --r-card: 22px; --r-panel: 28px; --r-pill: 999px;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --bg: #F6F2E8; --surface: #FFFDF8; --surface-2: #F1ECDF; --line: rgba(23,21,15,.12);
+  --ink: #17150F; --ink-2: #5B564A; --ink-3: #8A8477;
+  --mint: #BFEFD8; --butter: #FFE58A; --coral: #FFB3A7; --sky: #C9DDFF; --lilac: #DCD0FF; --on-accent: #17150F;
+  --ok-ink: #0F6B3F; --ok-fill: #178F58; --warn-ink: #7A4E00; --warn-fill: #A86F00;
+  --crit-ink: #A1261B; --crit-fill: #D4432E; --unknown-ink: #5B564A; --unknown-fill: #8A8477;
+  --chart-1: #2F6FD6; --chart-2: #E06B2D; --chart-3: #189B72; --chart-grid: var(--line);
+  --accent: var(--{{ accent }});
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14130F; --surface: #1D1B16; --surface-2: #26231D; --line: rgba(244,239,228,.12);
+    --ink: #F4EFE4; --ink-2: #B8B1A2; --ink-3: #857E70;
+    --ok-ink: #7ED9A8; --ok-fill: #1E9E63; --warn-ink: #FFD666; --warn-fill: #E39B00;
+    --crit-ink: #FF9B8C; --unknown-ink: #B8B1A2; --chart-1: #3987E5; --chart-2: #D95926; --chart-3: #199E70;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14130F; --surface: #1D1B16; --surface-2: #26231D; --line: rgba(244,239,228,.12);
+  --ink: #F4EFE4; --ink-2: #B8B1A2; --ink-3: #857E70;
+  --ok-ink: #7ED9A8; --ok-fill: #1E9E63; --warn-ink: #FFD666; --warn-fill: #E39B00;
+  --crit-ink: #FF9B8C; --unknown-ink: #B8B1A2; --chart-1: #3987E5; --chart-2: #D95926; --chart-3: #199E70;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0; padding: var(--s5) var(--s3); background: var(--bg); color: var(--ink);
+  font: 400 16px/1.5 var(--font-body); -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+.page { max-width: 960px; margin: 0 auto; }
+.hero {
+  background: var(--accent); color: var(--on-accent); border-radius: var(--r-card);
+  padding: var(--s4) 28px; display: grid; grid-template-columns: 1fr auto; gap: var(--s3); align-items: end;
+}
+.hero .kicker { font: 500 13px/1.4 var(--font-body); opacity: .8; letter-spacing: .01em; }
+.hero h1 { margin: var(--s1) 0 var(--s2); font: 700 28px/1.15 var(--font-display); }
+.hero .sub { font: 400 15px/1.5 var(--font-body); }
+.hero .score { text-align: right; }
+.hero .score .big { font: 700 40px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.hero .score .cap { font: 500 13px/1.4 var(--font-body); opacity: .85; margin-top: var(--s1); }
+.hero .pill { background: rgba(255,255,255,.55); border-color: rgba(23,21,15,.2); color: var(--on-accent); }
+.sec { margin-top: var(--s5); break-inside: avoid; page-break-inside: avoid; }
+.sec > h2 {
+  display: flex; align-items: center; gap: 12px; margin: 0 0 var(--s3);
+  font: 700 22px/1.2 var(--font-display);
+}
+.sec > h2 .mark {
+  display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px;
+  background: var(--surface-2); font-size: 20px; flex: 0 0 40px;
+}
+.sec > h2 .count { margin-left: auto; font: 500 14px/1.4 var(--font-body); color: var(--ink-2); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--s3); }
+.grid.charts { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
+.grid.wide { grid-template-columns: 1fr; }
+.tile {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card);
+  padding: var(--s3); break-inside: avoid; page-break-inside: avoid;
+}
+.tile + .tile { margin-top: var(--s3); }
+.tile .head { display: flex; align-items: center; gap: 12px; }
+.tile .emoji {
+  display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px;
+  background: var(--surface-2); font-size: 20px; flex: 0 0 40px;
+}
+.tile .title { font: 500 16px/1.3 var(--font-body); }
+.tile .subtitle { font: 400 13px/1.4 var(--font-body); color: var(--ink-2); }
+.tile .right { margin-left: auto; text-align: right; }
+.stat .value { margin-top: var(--s2); font: 600 22px/1.2 var(--font-display); font-variant-numeric: tabular-nums; }
+.stat .value small { font: 500 13px/1.4 var(--font-body); color: var(--ink-2); }
+.stat .caption { font: 400 13px/1.4 var(--font-body); color: var(--ink-2); margin-top: 2px; }
+.chart { margin-top: var(--s2); }
+.chart svg { width: 100%; height: auto; display: block; }
+.strip svg { width: 100%; height: 14px; display: block; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: var(--r-pill);
+  border: 1px solid var(--line); background: var(--surface-2); font: 500 13px/1.5 var(--font-body);
+  color: var(--ink-2); white-space: nowrap; vertical-align: middle;
+}
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--unknown-fill); flex: 0 0 8px; }
+.pill.ok { color: var(--ok-ink); } .pill.ok::before { background: var(--ok-fill); }
+.pill.warn { color: var(--warn-ink); } .pill.warn::before { background: var(--warn-fill); }
+.pill.crit { color: var(--crit-ink); } .pill.crit::before { background: var(--crit-fill); }
+.pill.unknown { color: var(--unknown-ink); }
+.pill.plain::before { display: none; }
+.hero .pill.ok, .hero .pill.warn, .hero .pill.crit, .hero .pill.unknown { color: var(--on-accent); }
+table.data { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.data th, table.data td { padding: 8px 10px; text-align: left; vertical-align: middle; border-top: 1px solid var(--line); }
+table.data th { font: 500 13px/1.4 var(--font-body); color: var(--ink-2); border-top: 0; padding-top: 0; }
+table.data td.num, table.data th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.data td.num { font-family: var(--font-display); font-weight: 500; }
+table.data td.strip { min-width: 180px; }
+table.data tr { break-inside: avoid; page-break-inside: avoid; }
+table.data .muted { color: var(--ink-2); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; word-break: break-word; }
+.stats-row { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); font-size: 14px; color: var(--ink-2); margin-bottom: var(--s3); }
+.stats-row b { color: var(--ink); font-family: var(--font-display); font-weight: 600; }
+.timeline { list-style: none; margin: var(--s3) 0 0; padding: 0 0 0 var(--s3); border-left: 1px solid var(--line); }
+.timeline li { position: relative; padding: 0 0 var(--s2) var(--s3); font-size: 14px; }
+.timeline li::before {
+  content: ""; position: absolute; left: -21px; top: 7px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--unknown-fill); border: 2px solid var(--surface);
+}
+.timeline li.warning::before { background: var(--warn-fill); }
+.timeline li.critical::before { background: var(--crit-fill); }
+.timeline .t { font-family: var(--font-display); font-weight: 500; font-variant-numeric: tabular-nums; margin-right: 8px; color: var(--ink-2); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
+.recs { list-style: none; margin: 0; padding: 0; }
+.recs li { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.recs li:first-child { border-top: 0; padding-top: 0; }
+.recs li .pill { flex: 0 0 auto; margin-top: 1px; }
+.empty { color: var(--ink-2); font-size: 15px; padding: var(--s2) 0; }
+.meter { display: flex; align-items: center; gap: 12px; margin-top: var(--s2); }
+.meter svg { flex: 1 1 auto; width: 100%; height: 8px; }
+.meter .lab { font: 500 13px/1.4 var(--font-display); font-variant-numeric: tabular-nums; color: var(--ink-2); flex: 0 0 auto; }
+footer { margin-top: var(--s6); padding-top: var(--s3); border-top: 1px solid var(--line); color: var(--ink-2); font-size: 13px; }
+footer p { margin: 0 0 var(--s1); }
+@page { size: A4; margin: 14mm; }
+@media print {
+  :root, :root:not([data-theme="light"]), :root[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #FFFFFF; --surface: #FFFFFF; --surface-2: #F1ECDF; --line: rgba(23,21,15,.18);
+    --ink: #17150F; --ink-2: #5B564A; --ink-3: #6E695D;
+    --ok-ink: #0F6B3F; --ok-fill: #178F58; --warn-ink: #7A4E00; --warn-fill: #A86F00;
+    --crit-ink: #A1261B; --crit-fill: #D4432E; --unknown-ink: #5B564A; --chart-1: #2F6FD6; --chart-2: #E06B2D; --chart-3: #189B72;
+  }
+  html, body { background: #fff; }
+  body { padding: 0; font-size: 12.5px; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { max-width: none; }
+  .hero { border: 1px solid var(--line); }
+  .sec { margin-top: var(--s4); }
+  .grid.charts { grid-template-columns: 1fr 1fr; }
+  .grid.wide { grid-template-columns: 1fr; }
+  a[href]::after { content: none; }
+}
+@media (max-width: 640px) {
+  body { padding: var(--s3); }
+  .hero { grid-template-columns: 1fr; }
+  .hero .score { text-align: left; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero" style="--accent: var(--{{ accent }})">
+  <div>
+    <div class="kicker">🛰️ DSpace Sentinel · Report{% if meta.demo %} · demo data{% endif %}</div>
+    <h1>{{ meta.title }}</h1>
+    <div class="sub">
+      <b>{{ meta.hostname }}</b> · {{ meta.range.title }} · {{ meta.range.from|datetime }} → {{ meta.range.to|datetime }}
+    </div>
+  </div>
+  <div class="score">
+    {% if summary.health_score is not none %}
+    <div class="big">{{ summary.health_score|score }}</div>
+    <div class="cap">health score / 100</div>
+    {% else %}
+    <div class="big">—</div>
+    <div class="cap">no data yet</div>
+    {% endif %}
+    {% set mood = summary.mood or 'unknown' %}
+    <div class="cap"><span class="pill {{ mood }}">{% if mood == 'ok' %}Healthy period{% elif mood == 'warn' %}Period with warnings{% elif mood == 'crit' %}Critical period{% else %}Collecting{% endif %}</span></div>
+  </div>
+</header>
+
+{% if 'summary' in sections %}
+<section class="sec" id="summary">
+  <h2><span class="mark">📋</span> Summary</h2>
+  <div class="grid">
+    <div class="tile stat">
+      <div class="head"><span class="emoji">💚</span><div><div class="title">Health score</div><div class="subtitle">availability, weighted</div></div></div>
+      <div class="value">{% if summary.health_score is not none %}{{ summary.health_score|score }} <small>/ 100</small>{% else %}—{% endif %}</div>
+    </div>
+    <div class="tile stat">
+      <div class="head"><span class="emoji">📈</span><div><div class="title">Availability</div><div class="subtitle">mean of all services</div></div></div>
+      <div class="value">{{ summary.availability_pct|pct(2) }}</div>
+    </div>
+    <div class="tile stat">
+      <div class="head"><span class="emoji">🧭</span><div><div class="title">Incidents</div><div class="subtitle">correlated alert groups</div></div></div>
+      <div class="value">{{ summary.incidents }}</div>
+    </div>
+    <div class="tile stat">
+      <div class="head"><span class="emoji">⚠️</span><div><div class="title">Alerts opened</div><div class="subtitle">{{ summary.alerts_critical }} critical · {{ summary.alerts_warning }} warning</div></div></div>
+      <div class="value">{{ summary.alerts_opened }}</div>
+    </div>
+    <div class="tile stat">
+      <div class="head"><span class="emoji">{{ summary.worst_component.emoji if summary.worst_component else '🧩' }}</span><div><div class="title">Worst component</div><div class="subtitle">{% if summary.worst_component %}{{ summary.worst_component.outages }} outage{{ '' if summary.worst_component.outages == 1 else 's' }}{% else %}nothing to report{% endif %}</div></div></div>
+      <div class="value">{% if summary.worst_component %}{{ summary.worst_component.label }} <small>{{ summary.worst_component.availability_pct|pct(2) }}</small>{% else %}—{% endif %}</div>
+    </div>
+    <div class="tile stat">
+      <div class="head"><span class="emoji">⏳</span><div><div class="title">Server uptime</div><div class="subtitle">since last boot</div></div></div>
+      <div class="value">{{ summary.uptime_s|duration }}</div>
+    </div>
+  </div>
+  <p class="empty">{{ summary.samples|number }} samples covering {{ summary.coverage_pct|pct }} of the period · generated {{ meta.generated_ts|datetime }}</p>
+</section>
+{% endif %}
+
+{% if 'server' in sections %}
+<section class="sec" id="server">
+  <h2><span class="mark">💻</span> Server <span class="count">{% if server.os %}{{ server.os }} · kernel {{ server.kernel }}{% endif %}{% if server.cores %} · {{ server.cores }} cores{% endif %}{% if server.mem_total %} · {{ server.mem_total|gb }} RAM{% endif %}</span></h2>
+  <div class="grid">
+    <div class="tile stat">
+      <div class="head"><span class="emoji">💻</span><div><div class="title">CPU</div><div class="subtitle">p95 {{ server.cpu.p95|pct }} · max {{ server.cpu.max|pct }}</div></div></div>
+      <div class="value">{{ server.cpu.avg|pct }} <small>avg</small></div>
+    </div>
+    <div class="tile stat">
+      <div class="head"><span class="emoji">🧠</span><div><div class="title">Memory</div><div class="subtitle">p95 {{ server.mem.p95|pct }} · max {{ server.mem.max|pct }}</div></div></div>
+      <div class="value">{{ server.mem.avg|pct }} <small>avg</small></div>
+    </div>
+    <div class="tile stat">
+      <div class="head"><span class="emoji">💾</span><div><div class="title">Disk {{ server.disk.path }}</div><div class="subtitle">{{ server.disk.free_now|bytes }} free of {{ server.disk.total|bytes }}</div></div></div>
+      <div class="value">{{ server.disk.max|pct }} <small>max</small></div>
+    </div>
+    <div class="tile stat">
+      <div class="head"><span class="emoji">⚖️</span><div><div class="title">Load</div><div class="subtitle">p95 {{ server.load.p95|number(2) }}{% if server.load.per_core_p95 is not none %} · {{ server.load.per_core_p95|number(2) }} per core{% endif %}</div></div></div>
+      <div class="value">{{ server.load.avg|number(2) }} <small>avg</small></div>
+    </div>
+  </div>
+  <div class="grid charts" style="margin-top: var(--s3)">
+    <div class="tile"><div class="title">CPU %</div><div class="chart">{{ charts.cpu }}</div></div>
+    <div class="tile"><div class="title">Memory %</div><div class="chart">{{ charts.mem }}</div></div>
+    <div class="tile"><div class="title">Disk % <span class="subtitle">{{ server.disk.path }}{% if server.disk.growth_per_day %} · growing {{ server.disk.growth_per_day|bytes }}/day{% endif %}</span></div><div class="chart">{{ charts.disk }}</div></div>
+    <div class="tile"><div class="title">Load average <span class="subtitle">1 min{% if server.cores %} · {{ server.cores }} cores{% endif %}</span></div><div class="chart">{{ charts.load }}</div></div>
+  </div>
+  <div class="grid wide" style="margin-top: var(--s3)">
+    <div class="tile"><div class="title">Network <span class="subtitle">avg {{ server.net.rx_avg|rate }} in · {{ server.net.tx_avg|rate }} out</span></div><div class="chart">{{ charts.net }}</div></div>
+  </div>
+  {% if server.swap.max and server.swap.max > 0 %}
+  <p class="empty">Swap: avg {{ server.swap.avg|pct }}, max {{ server.swap.max|pct }}{% if server.swap.used_fraction is not none %}, in use {{ (server.swap.used_fraction * 100)|round|int }} % of the time{% endif %}.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if 'services' in sections %}
+<section class="sec" id="services">
+  <h2><span class="mark">📚</span> Services <span class="count">{{ services|length }} monitored</span></h2>
+  <div class="tile">
+    {% if services %}
+    <table class="data">
+      <thead><tr><th>Service</th><th class="strip">Availability</th><th class="num">Uptime</th><th class="num">Outages</th><th class="num">Downtime</th><th class="num">Avg latency</th><th>Worst</th></tr></thead>
+      <tbody>
+      {% for s in services %}
+      <tr>
+        <td>{{ s.emoji }} {{ s.label }}</td>
+        <td class="strip">{{ charts['strip:' ~ s.id] }}</td>
+        <td class="num">{{ s.availability_pct|pct(2) }}</td>
+        <td class="num">{{ s.outages }}</td>
+        <td class="num">{{ s.downtime_s|duration if s.downtime_s else '—' }}</td>
+        <td class="num">{{ s.avg_latency_ms|ms }}</td>
+        <td><span class="pill {{ s.worst_status or 'unknown' }}">{{ s.worst_status|status_label }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="empty" style="margin-bottom:0">Health score weights: backend 30 · PostgreSQL 25 · Solr 15 · frontend 15 · nginx 10 · others 5. Warnings count as up; only critical counts as down.</p>
+    {% else %}
+    <p class="empty">📈 No availability data for this period yet.</p>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if 'latency' in sections %}
+<section class="sec" id="latency">
+  <h2><span class="mark">⏱️</span> Response times</h2>
+  {% if latency %}
+  <div class="grid charts">
+    {% for key, lat in latency.items() %}
+    <div class="tile">
+      <div class="head">
+        <div><div class="title">{{ lat.label }}</div><div class="subtitle mono">{{ lat.check }}</div></div>
+        <div class="right">{% if lat.status %}<span class="pill {{ lat.status }}">p95 {{ lat.p95|ms }}</span>{% else %}<span class="pill plain">p95 {{ lat.p95|ms }}</span>{% endif %}</div>
+      </div>
+      <div class="chart">{{ charts['latency:' ~ key] }}</div>
+      <div class="stats-row" style="margin:var(--s2) 0 0">
+        <span>p50 <b>{{ lat.p50|ms }}</b></span><span>p95 <b>{{ lat.p95|ms }}</b></span><span>max <b>{{ lat.max|ms }}</b></span>
+        <span>checks <b>{{ lat.samples|number }}</b></span>{% if lat.failures %}<span>failed <b>{{ lat.failures }}</b></span>{% endif %}
+        {% if lat.thresholds %}<span>thresholds <b>{{ lat.thresholds.warning|ms }}</b> / <b>{{ lat.thresholds.critical|ms }}</b></span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="tile"><p class="empty">⏱️ No response-time checks are enabled — turn on the backend or frontend module.</p></div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if 'alerts' in sections %}
+<section class="sec" id="alerts">
+  <h2><span class="mark">⚠️</span> Alerts <span class="count">{{ alert_stats.opened }} opened</span></h2>
+  <div class="tile">
+    <div class="stats-row">
+      <span>critical <b>{{ alert_stats.critical }}</b></span><span>warning <b>{{ alert_stats.warning }}</b></span>
+      <span>still open <b>{{ alert_stats.still_open }}</b></span><span>acknowledged <b>{{ alert_stats.acked }}</b></span>
+      {% if alert_stats.mean_time_to_resolve_s %}<span>mean time to resolve <b>{{ alert_stats.mean_time_to_resolve_s|duration }}</b></span>{% endif %}
+      {% if alert_stats.longest_s %}<span>longest <b>{{ alert_stats.longest_s|duration }}</b></span>{% endif %}
+    </div>
+    {% if alerts %}
+    <table class="data">
+      <thead><tr><th>Opened</th><th>Severity</th><th>Alert</th><th>Component</th><th class="num">Duration</th><th>State</th></tr></thead>
+      <tbody>
+      {% for a in alerts[:max_alert_rows] %}
+      <tr>
+        <td class="muted">{{ a.opened_ts|datetime }}</td>
+        <td><span class="pill {{ a.severity|severity_status }}">{{ a.severity|severity_label }}</span></td>
+        <td>{{ a.title }}{% if a.message %}<div class="subtitle">{{ a.message.splitlines()[-1] if a.message else '' }}</div>{% endif %}</td>
+        <td>{{ a.component_emoji }} {{ a.component_label }}</td>
+        <td class="num">{{ a.duration_s|duration }}</td>
+        <td class="muted">{{ 'open' if a.status == 'open' else 'resolved' }}{% if a.acked_ts %} · acked{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if alerts|length > max_alert_rows %}<p class="empty">… and {{ alerts|length - max_alert_rows }} more (all of them are in the JSON report).</p>{% endif %}
+    {% else %}
+    <p class="empty">✅ No alerts in this period.</p>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if 'incidents' in sections or 'alerts' in sections %}
+<section class="sec" id="incidents">
+  <h2><span class="mark">🧭</span> Incidents <span class="count">{{ incidents|length }}</span></h2>
+  {% for inc in incidents %}
+  <div class="tile">
+    <div class="head">
+      <span class="emoji">🧭</span>
+      <div><div class="title">#{{ inc.id }} · {{ inc.title }}</div><div class="subtitle">{{ inc.started_ts|datetime }} · lasted {{ inc.duration_s|duration }}{% if inc.affected %} · affected {{ inc.affected|join(', ') }}{% endif %}</div></div>
+      <div class="right"><span class="pill {{ 'crit' if inc.status == 'open' else 'ok' }}">{{ 'Open' if inc.status == 'open' else 'Resolved' }}</span></div>
+    </div>
+    {% if inc.hypothesis and inc.hypothesis != inc.title %}<p style="margin:var(--s2) 0 0">{{ inc.hypothesis }}</p>{% endif %}
+    {% if inc.sequence %}
+    <ol class="timeline">
+      {% for step in inc.sequence %}
+      <li class="{{ step.severity or '' }}"><span class="t">{{ step.ts|clock }}</span>{{ step.text }}</li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% if not incidents %}
+  <div class="tile"><p class="empty">🧭 No incidents in this period.</p></div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if 'repository' in sections %}
+<section class="sec" id="repository">
+  <h2><span class="mark">🗄️</span> Repository and storage</h2>
+  {% if repository.enabled and repository.now %}
+  <div class="grid">
+    {% for key, emoji, label, kind in [('items','📚','Items','n'), ('bitstreams','🧾','Bitstreams','n'), ('communities','🏛️','Communities','n'), ('collections','🗂️','Collections','n'), ('db_size','🐘','Database size','bytes'), ('assetstore_bytes','🗄️','Assetstore','bytes')] %}
+    <div class="tile stat">
+      <div class="head"><span class="emoji">{{ emoji }}</span><div><div class="title">{{ label }}</div><div class="subtitle">{{ repository.delta[key]|delta('bytes' if kind == 'bytes' else none) }} this period</div></div></div>
+      <div class="value">{% if kind == 'bytes' %}{{ repository.now[key]|bytes }}{% else %}{{ repository.now[key]|number }}{% endif %}</div>
+      {% if repository.growth_per_day[key] %}<div class="caption">{% if kind == 'bytes' %}{{ repository.growth_per_day[key]|bytes }}{% else %}{{ repository.growth_per_day[key]|number(1) }}{% endif %} per day</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% elif repository.enabled %}
+  <div class="tile"><p class="empty">📚 No repository snapshots in this period yet.</p></div>
+  {% else %}
+  <div class="tile"><p class="empty">📚 The Repository module is off — storage forecasts below come from the server samples.</p></div>
+  {% endif %}
+  {% if repository.forecasts %}
+  <div class="grid charts" style="margin-top: var(--s3)">
+    {% for fc in repository.forecasts %}
+    <div class="tile">
+      <div class="head">
+        <span class="emoji">💾</span>
+        <div><div class="title">{{ fc.label }}</div><div class="subtitle">{{ fc.free|bytes }} free of {{ fc.total|bytes }}{% if fc.growth_per_day %} · growing {{ fc.growth_per_day|bytes }}/day{% endif %}</div></div>
+        <div class="right">{% if fc.days_until_full is not none %}<span class="pill {{ 'crit' if fc.days_until_full < 14 else 'warn' if fc.days_until_full < 60 else 'ok' }}">full in {{ fc.days_until_full|days }}</span>{% else %}<span class="pill ok">not growing</span>{% endif %}</div>
+      </div>
+      <div class="meter">{{ charts['meter:' ~ fc.id] }}<span class="lab">{% if fc.total and fc.free is not none %}{{ ((fc.total - fc.free) * 100 / fc.total)|round|int }} % used{% endif %}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if 'logs' in sections %}
+<section class="sec" id="logs">
+  <h2><span class="mark">📜</span> Logs</h2>
+  {% if logs.enabled %}
+  <div class="grid">
+    <div class="tile stat"><div class="head"><span class="emoji">📜</span><div><div class="title">Errors</div><div class="subtitle">estimated for the period</div></div></div><div class="value">{{ logs.totals.errors_estimate|number }}</div></div>
+    <div class="tile stat"><div class="head"><span class="emoji">📈</span><div><div class="title">Peak</div><div class="subtitle">per {{ logs.window_minutes }}-minute window</div></div></div><div class="value">{{ logs.totals.peak_per_window|number }}</div></div>
+    <div class="tile stat"><div class="head"><span class="emoji">⚠️</span><div><div class="title">Windows over warning</div><div class="subtitle">{{ logs.totals.windows_over_critical }} over critical</div></div></div><div class="value">{{ logs.totals.windows_over_warning|number }}</div></div>
+    <div class="tile stat"><div class="head"><span class="emoji">{{ '📈' if logs.trend.up else '📉' }}</span><div><div class="title">Trend</div><div class="subtitle">first half → second half</div></div></div><div class="value">{{ logs.trend.first_half|number }} → {{ logs.trend.second_half|number }}</div></div>
+  </div>
+  <div class="tile" style="margin-top: var(--s3)">
+    <table class="data">
+      <thead><tr><th>Log</th><th class="num">Errors (est.)</th><th class="num">Peak / window</th><th class="num">Over warning</th><th>Path</th></tr></thead>
+      <tbody>
+      {% for f in logs.files %}
+      <tr><td>{{ f.label }}</td><td class="num">{{ f.errors_estimate|number }}</td><td class="num">{{ f.peak_per_window|number }}</td><td class="num">{{ f.windows_over_warning }}</td><td class="mono muted">{{ f.path }}{% if f.missing %} (missing){% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if logs.top_errors %}
+  <div class="tile" style="margin-top: var(--s3)">
+    <div class="title" style="margin-bottom: var(--s2)">Top errors</div>
+    <table class="data">
+      <thead><tr><th>Message</th><th class="num">Seen</th><th>Source</th></tr></thead>
+      <tbody>
+      {% for e in logs.top_errors %}
+      <tr><td class="mono">{{ e.text }}</td><td class="num">{{ e.count }}</td><td class="muted">{{ e.source }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="tile"><p class="empty">📜 The Logs module is off.</p></div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if 'security' in sections %}
+<section class="sec" id="security">
+  <h2><span class="mark">🛡️</span> Security{% if security.checked_ts %} <span class="count">checked {{ security.checked_ts|datetime }}</span>{% endif %}</h2>
+  {% if not security.enabled %}
+  <div class="tile"><p class="empty">🛡️ The Security module is off.</p></div>
+  {% elif security.verdict == 'no_data' %}
+  <div class="tile"><p class="empty">🛡️ No security check has run yet.</p></div>
+  {% else %}
+  <div class="tile">
+    {% if security.findings %}
+    <ul class="recs">
+      {% for f in security.findings %}
+      <li><span class="pill {{ f.status }}">{{ f.label }}</span><span>{{ f.message }}{% if f.hint %}<span class="subtitle" style="display:block">{{ f.hint }}</span>{% endif %}</span></li>
+      {% endfor %}
+    </ul>
+    {% elif security.verdict == 'clear' %}
+    <p class="empty">✅ No security findings.</p>
+    {% else %}
+    <p class="empty">🛡️ The last security check gave no result: {{ security.reason }}</p>
+    {% endif %}
+  </div>
+  {% if security.earlier %}
+  <div class="tile" style="margin-top: var(--s3)">
+    <div class="title" style="margin-bottom: var(--s2)">Earlier in this period</div>
+    <ul class="recs">
+      {% for e in security.earlier %}
+      <li><span class="pill plain">{{ e.label }}</span><span>{{ e.message }}<span class="subtitle" style="display:block">warned in {{ e.warnings }} of {{ e.checks }} checks · last {{ e.last_ts|datetime }}</span></span></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if security.rungs %}
+  <div class="tile" style="margin-top: var(--s3)">
+    <table class="data">
+      <thead><tr><th>Check</th><th>Status</th><th>Result</th><th class="num">Warnings this period</th></tr></thead>
+      <tbody>
+      {% for r in security.rungs %}
+      <tr>
+        <td>{{ r.label }}</td>
+        <td>{% if r.informational %}<span class="pill unknown">Note</span>{% else %}<span class="pill {{ r.status }}">{{ r.status|status_label }}</span>{% endif %}</td>
+        <td>{{ r.message or '—' }}</td>
+        <td class="num">{% if r.period_checks %}{{ r.period_warnings }} of {{ r.period_checks }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% if security.ports %}
+  <div class="tile" style="margin-top: var(--s3)">
+    <div class="head">
+      <div><div class="title">Open ports</div><div class="subtitle">{{ security.port_counts.listening|number }} listening · {{ security.port_counts.reachable|number }} reachable from the network · {{ security.port_counts.exposed|number }} unexpected</div></div>
+    </div>
+    <table class="data" style="margin-top: var(--s2)">
+      <thead><tr><th class="num">Port</th><th>Program</th><th>Address</th><th>Reachable</th><th>Expected</th><th>Verdict</th></tr></thead>
+      <tbody>
+      {% for port in security.ports[:max_port_rows] %}
+      <tr>
+        <td class="num">{{ port.port }}{% if port.proto != 'tcp' %}/{{ port.proto }}{% endif %}</td>
+        <td>{{ port.process or '—' }}</td>
+        <td class="mono muted">{{ port.addrs|join(', ') if port.addrs else '—' }}</td>
+        <td>{{ 'from the network' if port.public else 'this server only' }}</td>
+        <td>{{ port.expected|expect_label }}</td>
+        <td><span class="pill {{ port.verdict|verdict_status }}">{{ port.verdict|verdict_label }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if security.ports|length > max_port_rows %}<p class="empty">… and {{ security.ports|length - max_port_rows }} more (all of them are in the JSON report).</p>{% endif %}
+  </div>
+  {% endif %}
+  {% if security.software %}
+  <div class="tile" style="margin-top: var(--s3)">
+    <div class="title" style="margin-bottom: var(--s2)">Software</div>
+    <table class="data">
+      <thead><tr><th>Software</th><th>Version</th><th>Supported until</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for sw in security.software %}
+      <tr>
+        <td>{{ sw.name }}{% if sw.note %}<div class="subtitle">{{ sw.note }}</div>{% endif %}</td>
+        <td>{{ sw.version or '—' }}</td>
+        <td>{{ sw.until or '—' }}</td>
+        <td><span class="pill {{ sw.status|support_status }}">{{ sw.status|support_label }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% endif %}
+</section>
+{% endif %}
+
+{% if 'recommendations' in sections %}
+<section class="sec" id="recommendations">
+  <h2><span class="mark">💡</span> Recommendations</h2>
+  <div class="tile">
+    <ul class="recs">
+      {% for r in recommendations %}
+      <li><span class="pill {{ r.severity|severity_status }}">{{ r.severity|severity_label }}</span><span>{{ r.text }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}
+
+<footer>
+  <p>Generated by DSpace Sentinel v{{ meta.sentinel_version }} on {{ meta.hostname }} at {{ meta.generated_ts|datetime }}{% if meta.modules %} · modules: {{ meta.modules|join(', ') }}{% endif %}.</p>
+  <p>Sentinel only observes: nothing in this report changed DSpace, PostgreSQL, Solr or their files.</p>
+</footer>
+
+</div>
+</body>
+</html>

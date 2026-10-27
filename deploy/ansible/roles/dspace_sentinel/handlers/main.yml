@@ -1,0 +1,16 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart dspace-sentinel
+  ansible.builtin.systemd:
+    name: dspace-sentinel
+    state: restarted
+  when: dspace_sentinel_service_state == 'started'
+
+- name: Reload nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+  when: dspace_sentinel_nginx_reload | bool

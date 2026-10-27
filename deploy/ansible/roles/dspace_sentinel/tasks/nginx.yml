@@ -1,0 +1,45 @@
+---
+# Optional: publish Sentinel under /sentinel/ on the existing nginx with HTTP Basic auth.
+# The snippet is written to dspace_sentinel_nginx_snippet_path; include it in your server block.
+
+- name: Refuse to write an htpasswd file without a password
+  ansible.builtin.assert:
+    that:
+      - dspace_sentinel_nginx_htpasswd_password | length > 0
+    fail_msg: set dspace_sentinel_nginx_htpasswd_password (in ansible-vault) when the nginx snippet is enabled
+    quiet: true
+
+- name: Install passlib (used to manage the htpasswd file)
+  ansible.builtin.apt:
+    name: python3-passlib
+    state: present
+  when:
+    - dspace_sentinel_manage_apt | bool
+    - ansible_facts['os_family'] == 'Debian'
+
+- name: Write the basic-auth password file
+  community.general.htpasswd:
+    path: "{{ dspace_sentinel_nginx_htpasswd_path }}"
+    name: "{{ dspace_sentinel_nginx_htpasswd_user }}"
+    password: "{{ dspace_sentinel_nginx_htpasswd_password }}"
+    owner: root
+    group: "{{ dspace_sentinel_nginx_htpasswd_group }}"
+    mode: "0640"
+  no_log: true
+  notify: Reload nginx
+
+- name: Write the nginx snippet
+  ansible.builtin.template:
+    src: nginx-sentinel.conf.j2
+    dest: "{{ dspace_sentinel_nginx_snippet_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Show how to activate the snippet
+  ansible.builtin.debug:
+    msg: >-
+      Add `include {{ dspace_sentinel_nginx_snippet_path }};` inside the server block that serves
+      your repository, then `nginx -t && systemctl reload nginx`. Sentinel will answer at
+      https://<your-host>{{ dspace_sentinel_nginx_location }}

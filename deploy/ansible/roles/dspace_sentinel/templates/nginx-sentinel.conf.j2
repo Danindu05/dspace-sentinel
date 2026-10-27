@@ -1,0 +1,35 @@
+# {{ ansible_managed }}
+# DSpace Sentinel behind nginx with HTTP Basic auth. Include this file inside the server block
+# that serves your repository:  include {{ dspace_sentinel_nginx_snippet_path }};
+{% set _prefix = dspace_sentinel_nginx_location | regex_replace('/+$', '') %}
+{% if _prefix %}
+
+location = {{ _prefix }} {
+    return 301 {{ _prefix }}/;
+}
+{% endif %}
+
+location {{ _prefix }}/ {
+    auth_basic           "DSpace Sentinel";
+    auth_basic_user_file {{ dspace_sentinel_nginx_htpasswd_path }};
+
+    proxy_pass         http://{{ '127.0.0.1' if dspace_sentinel_host in ('0.0.0.0', '::', '') else dspace_sentinel_host }}:{{ dspace_sentinel_port }}/;
+    proxy_http_version 1.1;
+    proxy_set_header   Host               $host;
+    proxy_set_header   X-Real-IP          $remote_addr;
+    proxy_set_header   X-Forwarded-For    $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto  $scheme;
+{% if _prefix %}
+    proxy_set_header   X-Forwarded-Prefix {{ _prefix }};
+{% endif %}
+    proxy_set_header   Connection         "";
+    proxy_redirect     off;
+
+    # Server-sent events need an unbuffered, long-lived connection.
+    proxy_buffering       off;
+    proxy_cache           off;
+    proxy_read_timeout    1h;
+    proxy_send_timeout    1h;
+    gzip                  off;
+    client_max_body_size  1m;
+}

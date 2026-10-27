@@ -1,0 +1,187 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m ruff check dspace_sentinel tests
+      - run: python -m ruff format --check dspace_sentinel tests
+
+  test:
+    name: pytest (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Unit and API tests
+        # tests/e2e skips itself unless SENTINEL_E2E=1, so a plain `pytest` is the unit suite.
+        run: python -m pytest -p no:cacheprovider
+      - name: Demo doctor smoke
+        env:
+          SENTINEL_DEMO: "1"
+          SENTINEL_DATA_DIR: ${{ runner.temp }}/sentinel-data
+          SENTINEL_CONFIG: ${{ runner.temp }}/sentinel.yaml
+        run: python -m dspace_sentinel doctor --demo
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update -q && sudo apt-get install -y -q shellcheck
+      - name: shellcheck sentinel.sh
+        run: |
+          test -f sentinel.sh || { echo "::error::sentinel.sh is missing"; exit 1; }
+          shellcheck --version | head -2
+          shellcheck sentinel.sh
+          find deploy -type f -name '*.sh' -print0 2>/dev/null | xargs -0 -r shellcheck
+
+  ansible-lint:
+    name: ansible-lint + syntax-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install "ansible-lint>=26.9,<27"
+      - name: Galaxy requirements
+        working-directory: deploy/ansible
+        run: ansible-galaxy collection install -r requirements.yml
+      - name: ansible-playbook --syntax-check
+        working-directory: deploy/ansible
+        run: ansible-playbook -i inventory.example.ini --syntax-check playbook.yml
+      - name: ansible-lint (production profile)
+        working-directory: deploy/ansible
+        run: ansible-lint --offline --profile production .
+      - name: Role tests with real Ansible (vault, pre-flight checks, rendered config)
+        # the pytest job has no Ansible, so these cases skip there; here ansible-core is installed
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pytest tests/test_ansible_role.py -p no:cacheprovider -rs
+
+  install-smoke:
+    # The README path on a clean distro: python3 + python3-venv, ./sentinel.sh install/start/
+    # status/doctor/stop, also called from another directory and through a symlink.
+    name: install smoke (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["ubuntu:22.04", "ubuntu:24.04"]
+    container: ${{ matrix.image }}
+    steps:
+      - name: Distro packages the README asks for
+        run: |
+          apt-get update -q
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+            ca-certificates curl git python3 python3-venv
+      - uses: actions/checkout@v4
+      - name: Install
+        run: ./sentinel.sh install --port 9765 --no-discover
+      - name: Start and reach /healthz
+        run: |
+          ./sentinel.sh start
+          curl -fsS http://127.0.0.1:9765/healthz
+      - name: Status and version from another directory and through a symlink
+        run: |
+          cd / && "$GITHUB_WORKSPACE/sentinel.sh" status
+          ln -s "$GITHUB_WORKSPACE/sentinel.sh" /usr/local/bin/sentinel
+          cd /tmp && sentinel version -v
+      - name: Doctor (live exits 0/1/2 for health, never 4 or 64; the demo starts calm)
+        run: |
+          rc=0
+          (cd / && "$GITHUB_WORKSPACE/sentinel.sh" doctor --ascii) || rc=$?
+          echo "doctor exit code: $rc"
+          [ "$rc" -le 2 ]
+          (cd /tmp && "$GITHUB_WORKSPACE/sentinel.sh" doctor --demo --ascii)
+      - name: Stop
+        run: |
+          ./sentinel.sh stop
+          if ./sentinel.sh status; then echo "::error::still running after stop"; exit 1; fi
+      - name: Render the systemd unit
+        run: |
+          ./sentinel.sh install-service --print > "$RUNNER_TEMP/dspace-sentinel.service"
+          grep -q '^ExecStart="' "$RUNNER_TEMP/dspace-sentinel.service"
+          if command -v systemd-analyze >/dev/null; then systemd-analyze verify "$RUNNER_TEMP/dspace-sentinel.service"; fi
+      - name: Install log
+        if: failure()
+        run: cat data/install.log data/sentinel.log 2>/dev/null || true
+
+  e2e:
+    name: playwright demo smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('requirements-dev.txt') }}
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Boot the demo and drive the UI
+        # tests/e2e/test_ui.py starts `SENTINEL_DEMO=1 python -m dspace_sentinel serve` on a free
+        # port with a temporary data dir, waits for /healthz and writes build/screenshots/*.png
+        # (SENTINEL_E2E_SHOTS=<dir> overrides). The suite is gated behind SENTINEL_E2E=1 so the
+        # unit job above never collects it.
+        env:
+          SENTINEL_E2E: "1"
+          SENTINEL_DEMO: "1"
+          SENTINEL_E2E_HEADLESS: "1"
+        run: python -m pytest tests/e2e -v -p no:cacheprovider
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: build/screenshots/
+          if-no-files-found: warn
+          retention-days: 14

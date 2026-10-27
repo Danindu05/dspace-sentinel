@@ -1,0 +1,6 @@
+---
+# ansible-galaxy install -r requirements.yml
+collections:
+  # community.general.htpasswd manages the password file for the optional nginx snippet.
+  - name: community.general
+    version: ">=8.0.0"

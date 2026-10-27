@@ -1,0 +1,271 @@
+# =============================================================================
+#  DSpace Sentinel — configuration
+# =============================================================================
+#
+#  This file is copied to config/sentinel.yaml by `./sentinel.sh install` and is the
+#  single source of truth. The web UI (More tab) edits it for you through the API:
+#  changes are validated, written atomically (mode 0600) and applied without a
+#  restart. You can also edit it by hand and restart Sentinel.
+#
+#  Saving from the UI rewrites the whole file WITHOUT these comments. Keep your notes
+#  elsewhere, or make every change by hand and restart. The server: section is only
+#  ever changed here, except server.timezone, which More › Alert thresholds may change,
+#  and server.login, which ./sentinel.sh set-password writes (it rewrites the file like
+#  a UI save) and More › Account changes the password of (the UI refuses the rest;
+#  restart to apply).
+#
+#  Everything you leave out falls back to the defaults shown here.
+#
+#  Environment variables override the file (highest precedence) and are never written
+#  back into it:
+#    SENTINEL_CONFIG            path of this file
+#    SENTINEL_DATA_DIR          where sentinel.db, reports and logs live (default: <repo>/data)
+#    SENTINEL_HOST              overrides server.host
+#    SENTINEL_PORT              overrides server.port
+#    SENTINEL_AUTH_TOKEN        overrides server.auth_token
+#    SENTINEL_TELEGRAM_TOKEN    with SENTINEL_TELEGRAM_CHAT_ID: one more Telegram bot, shown
+#    SENTINEL_TELEGRAM_CHAT_ID  read-only in the UI ("From environment"; left out when five bots
+#                               are already listed); the token alone is the bot token of every
+#                               bot in notifiers.telegram.chats saved without one
+#    SENTINEL_SMTP_PASSWORD     overrides notifiers.email.password and makes it read-only: the UI
+#                               and the API can then change neither it nor the server it goes to
+#    SENTINEL_PG_PASSWORD       overrides postgres.password
+#    SENTINEL_ALLOW_OPEN=1      same as server.allow_unauthenticated: true
+#    SENTINEL_DEMO=1            demo mode: a synthetic DSpace stack with a scripted incident
+#
+#  Keep secrets in config/sentinel.env next to this file (KEY=VALUE lines, chmod 600,
+#  git-ignored): every ./sentinel.sh command and the systemd unit read it, and variables
+#  already set in the environment win.
+#
+#  Sentinel only ever *observes*: it never restarts, writes to or reconfigures
+#  DSpace, PostgreSQL, Solr, Tomcat, Node or nginx.
+# -----------------------------------------------------------------------------
+
+server:
+  host: 127.0.0.1          # Bind address. Anything but localhost, 127.x or ::1 (e.g. 0.0.0.0)
+                           # needs the login below, auth_token or allow_unauthenticated, or
+                           # Sentinel refuses to start. Prefer the nginx HTTPS recipe in
+                           # docs/REVERSE-PROXY.md in front of it.
+  port: 9765               # HTTP port of the dashboard and API.
+  auth_token: ""           # A token for scripts: Authorization: Bearer <token>, or HTTP Basic
+                           # with any user name and password = this token. Without a login the
+                           # dashboard itself asks for it (the browser's Basic pop-up). Leave
+                           # empty when nginx handles auth. Prefer SENTINEL_AUTH_TOKEN in
+                           # config/sentinel.env.
+  login:                   # The dashboard login (one admin account): with password_hash set,
+    username: ""           # the web UI asks people to sign in. Set it with
+    password_hash: ""      # ./sentinel.sh set-password (it stores a scrypt hash, never the
+                           # password); --remove deletes it. ./sentinel.sh install asks for it
+                           # on a terminal. A running Sentinel picks up a change within seconds.
+                           # Not changed by the UI's settings forms (More › Account changes the
+                           # password of the signed-in admin). The demo never asks for it.
+  hostname: ""             # Label shown in the UI and in alerts. Empty = the machine's hostname.
+  allowed_hosts: []        # Extra names accepted in the Host header, e.g. [sentinel.example.org]
+                           # for a dedicated nginx site; "*" allows any. Always accepted: IP
+                           # addresses, localhost, this machine's names and the hosts of the
+                           # dspace, nginx and ssl URLs below. Anything else gets HTTP 400.
+  allow_unauthenticated: false   # true = serve a non-loopback host without a login or auth_token
+                                 # (only behind a firewall or an authenticating proxy on another
+                                 # machine).
+  timezone: ""             # Zone of the times Sentinel shows people (alerts, emails, Telegram,
+                           # reports, quiet hours, the daily digest, the weekly report hour,
+                           # doctor): an IANA name such as Asia/Colombo. Empty = the server's
+                           # zone. Every time names its zone ("Started 21:29 +0530"). The one
+                           # server setting More › Alert thresholds may change; a name this
+                           # system does not know is ignored at start-up with a notice. Log
+                           # files keep their own zones (logs.files[].timezone).
+
+setup:
+  completed: false         # Onboarding gate. The UI sets this to true after the first-run wizard.
+  persona: ""              # What the wizard picked: full | backend | frontend | server
+
+collector:
+  system_interval: 15      # Seconds between CPU / memory / disk / load samples.
+  service_interval: 30     # systemd unit checks and port scans.
+  http_interval: 30        # REST API, Angular homepage, Solr, nginx, SSL checks.
+  db_interval: 60          # PostgreSQL connect + SELECT 1 + connection stats.
+  logs_interval: 60        # Error counting in log files.
+  repository_interval: 900 # Item / bitstream / community / collection counts (15 min).
+  security_interval: 900   # Security module: open ports, firewall, SSH, updates, software, files (15 min).
+  retention_days: 30       # Raw samples and check results. Hourly roll-ups are kept 365 days.
+
+dspace:
+  install_dir: /dspace                        # DSpace installation directory ([dspace] in the docs).
+  auto_discover: true                         # Read <install_dir>/config/local.cfg (+ dspace.cfg)
+                                              # when you press "Detect automatically" / run discover.
+  server_url: http://localhost:8080/server    # REST API base URL (dspace.server.url).
+  ui_url: http://localhost:4000               # Angular UI URL as served by Node (dspace.ui.url).
+  public_url: ""                              # e.g. https://repo.example.org — when set, the frontend
+                                              # is also checked through nginx/TLS the way users see it,
+                                              # and the homepage is asked for as this host (DSpace 9.3+
+                                              # renders on the server only for the host in ui.baseUrl).
+  assetstore_dir: /dspace/assetstore          # Where bitstreams live (assetstore.dir).
+  log_dir: /dspace/log                        # DSpace log directory.
+  backend_service: tomcat9                    # systemd unit running the REST API: tomcat9 (DSpace 7),
+                                              # tomcat10 (DSpace 8/9 on Ubuntu 24.04, Debian 12/13) or
+                                              # your unit for the runnable JAR (dspace …). "Detect
+                                              # automatically" finds it. Empty string = skip the rung.
+  frontend_service: dspace-ui                 # systemd unit running the Angular UI (its own unit, or
+                                              # pm2-<user>, which only proves the PM2 daemon runs).
+                                              # "" = skip the rung (a UI started without a unit;
+                                              # "Detect automatically" suggests "" then).
+  verify_tls: true                            # Set false for self-signed certificates on public_url.
+
+postgres:
+  host: localhost
+  port: 5432
+  database: dspace
+  user: dspace
+  password: ""             # Prefer SENTINEL_PG_PASSWORD or a read-only role. Never printed by the API.
+  sslmode: prefer          # disable | allow | prefer | require | verify-ca | verify-full
+  service: postgresql      # systemd unit (postgresql, postgresql@15-main …). "" = skip the rung.
+
+solr:
+  url: http://localhost:8983/solr             # solr.server in local.cfg.
+  cores: [search, statistics, oai, authority] # Each core gets a ping rung; "search" gets a timed query.
+                                              # With solr.multicorePrefix, list the prefixed names. The
+                                              # optional qaevent/suggestion (DSpace 8+) and audit (10+)
+                                              # cores get a rung by themselves when Solr has them.
+  service: solr                               # systemd unit; "" = skip the rung (a Solr started by
+                                              # hand with bin/solr start has no unit).
+
+# The web server in front of DSpace. No web server on this machine (DSpace opened directly on
+# :4000)? Switch modules.nginx off instead: the DSpace Frontend check already covers :4000.
+nginx:
+  service: nginx           # systemd unit; use apache2 if that is your web server.
+  http_url: http://localhost                  # Plain HTTP check through the web server (not :4000).
+  https_url: ""                               # e.g. https://repo.example.org — HTTPS check (optional).
+
+ssl:
+  host: ""                 # Host whose certificate is inspected. Empty = host of dspace.public_url.
+  port: 443
+
+# Ports Sentinel expects to see. `expect: open` warns when the port is closed;
+# `expect: local_only` warns when the port listens on 0.0.0.0 / :: (reachable from outside).
+# Sentinel sees where a port listens, not your firewall: when a firewall already closes such a
+# port to other machines, change its rule to `expect: open` and restart Sentinel.
+# The Security module reads these rules too: a port other machines can reach that no rule names
+# is "exposed" there ("new", with an alert, when it opened after Sentinel started); one that
+# other machines reach only on Tailscale's addresses (100.64.0.0/10, fd7a:115c:a1e0::/48) reads
+# "Tailscale", not exposed, and needs no rule.
+ports:
+  - {port: 22,   label: SSH,        expect: open}
+  - {port: 80,   label: HTTP,       expect: open}
+  - {port: 443,  label: HTTPS,      expect: open}
+  - {port: 4000, label: Angular,    expect: open}
+  - {port: 8080, label: Backend,    expect: open}
+  - {port: 8983, label: Solr,       expect: local_only}
+  - {port: 5432, label: PostgreSQL, expect: local_only}
+
+logs:
+  # Files are read from the tail only (last 256 KB). A missing file is skipped silently
+  # (status "unknown", never a warning). One Sentinel may not read is "permission denied", with
+  # the group to join: after joining it, log out and in again, then restart Sentinel. The nginx
+  # entry is read only while modules.nginx is on. `daily_suffix: true` follows DSpace's daily files:
+  # dspace.log rolled to dspace.log-YYYY-MM-DD (DSpace 7-10) or dspace.log.YYYY-MM-DD (DSpace 6).
+  # The Tomcat log is tomcat10's (/var/log/tomcat10/catalina.out) for DSpace 8/9 on Ubuntu 24.04;
+  # the runnable JAR has none (its messages go to dspace.log).
+  # `timezone` is the zone of the file's timestamps: "" = this machine's local time, unless the
+  # newest line only matches the file's modification time when read as UTC (Solr logs in UTC by
+  # default); "local" turns that detection off; "UTC" or an IANA name ("Asia/Colombo") fixes it.
+  files:
+    - {id: dspace, label: DSpace, path: /dspace/log/dspace.log,        daily_suffix: true,  timezone: ""}
+    - {id: tomcat, label: Tomcat, path: /var/log/tomcat9/catalina.out, daily_suffix: false, timezone: ""}
+    - {id: solr,   label: Solr,   path: /var/solr/logs/solr.log,       daily_suffix: false, timezone: ""}
+    - {id: nginx,  label: nginx,  path: /var/log/nginx/error.log,      daily_suffix: false, timezone: ""}
+  window_minutes: 5        # Errors are counted over this sliding window.
+
+alerts:
+  confirm_samples: 2       # Consecutive breaches before an alert opens (anti-flap).
+  clear_samples: 3         # Consecutive healthy samples before it resolves.
+  reminder_minutes: 0      # Re-notify every N minutes while open and unacknowledged. 0 = only on
+                           # open / escalate / resolve.
+  # Thresholds: warning and critical. Percentages unless stated otherwise.
+  cpu:                      {warning: 80,   critical: 95}
+  memory:                   {warning: 80,   critical: 92}
+  swap:                     {warning: 50,   critical: 80}
+  disk:                     {warning: 80,   critical: 90}     # every mounted filesystem Sentinel watches
+  load_per_core:            {warning: 1.5,  critical: 3.0}    # load1 divided by CPU cores
+  rest_latency_ms:          {warning: 1000, critical: 3000}   # GET /server/api
+  search_latency_ms:        {warning: 1500, critical: 4000}   # discover/search/objects and Solr select
+  home_latency_ms:          {warning: 2000, critical: 5000}   # Angular homepage
+  postgres_connections_pct: {warning: 80,   critical: 95}     # connections / max_connections
+  ssl_expiry_days:          {warning: 30,   critical: 7}      # lower is worse
+  log_errors_per_window:    {warning: 20,   critical: 100}    # per file, per logs.window_minutes
+  assetstore_free_gb:       {warning: 50,   critical: 10}     # lower is worse
+
+notifiers:
+  telegram:
+    enabled: false
+    # Up to 5 destinations, one bot each: every person creates their own bot with @BotFather
+    # (/newbot), sends it any message and adds the bot's token and their chat id here, or in
+    # More › Telegram. An older single bot_token + chat_id here still works (as one entry).
+    #   - id: a1b2c3d4                 # set by Sentinel when the entry is first saved; keep it
+    #     label: Danindu               # optional, up to 40 characters
+    #     bot_token: "123456789:AA…"   # from @BotFather. A secret: never printed by the API.
+    #     chat_id: "123456789"         # a person's id, a group's (negative) or @channelname
+    #     min_severity: warning        # warning = every alert | critical = critical alerts only
+    chats: []
+    quiet_hours: ""        # "23:00-07:00" → only critical alerts during this window (every bot),
+                           # in the zone of server.timezone (the server's zone when empty).
+                           # "7:00 – 9:30" is read as 07:00-09:30. A value Sentinel cannot read
+                           # ("11pm-7am", or the same time twice) is left out: Sentinel starts
+                           # without quiet hours and says so in its log and in the events log.
+    daily_digest: ""       # "08:00" → one summary message per day (server.timezone, like quiet
+                           # hours). "" = off. Keep the quotes:
+                           # unquoted, YAML reads 18:00 as the number 1080. Sentinel reads such a
+                           # number (60 to 1439) back as the time it was written as; any other
+                           # value it cannot read ("8 am", 1800) is left out like quiet hours.
+  email:
+    enabled: false
+    smtp_host: smtp.gmail.com   # Gmail: smtp.gmail.com, starttls on 587 or ssl on 465.
+    smtp_port: 587
+    security: starttls     # starttls | ssl | none (no encryption: only for a relay that needs no
+                           # password, or one on this machine).
+    username: ""           # The Gmail address Sentinel logs in with. A login that is not an email
+                           # address (SendGrid's apikey, an SES key id) needs from_address; without
+                           # it Sentinel starts, but email is not ready and its log says why.
+    password: ""           # A Gmail app password (Google Account › Security › 2-Step Verification ›
+                           # App passwords), never your normal password. Prefer
+                           # SENTINEL_SMTP_PASSWORD. Never printed by the API, and only sent to
+                           # the server and login it was saved for. Letters, digits and symbols
+                           # from the English keyboard only: SMTP cannot send any other character
+                           # (the UI and the API refuse one; here it leaves email not ready). The
+                           # mask •••••• pasted here means no password.
+    from_address: ""       # "" = username. Gmail always sends as the account that logs in.
+    from_name: DSpace Sentinel   # The sender's name in the From: header.
+    # Up to 5 recipients, e.g.  - {address: ops@example.org, label: On call, min_severity: warning}
+    # (min_severity critical = critical alerts only; tests, digests and reports go to everyone).
+    recipients: []
+    quiet_hours: ""        # Same as for Telegram, applied to email only.
+    daily_digest: ""       # "08:00" → one summary email per day. "" = off.
+  webhook:
+    enabled: false
+    url: ""                # POST JSON for every alert / incident event. A secret (masked by the
+                           # API). TLS is always verified and redirects are never followed.
+
+reports:
+  weekly: {enabled: false, weekday: 1, hour: 8, send_telegram: false, send_email: false}   # weekday 1 = Monday
+  # The weekday and hour are read in the zone of server.timezone (the server's zone when empty).
+  # Every section: summary, server, services, latency, alerts, incidents, repository, logs,
+  # security, recommendations. Repository, Logs and Security say so when their module is off.
+  default_sections: [summary, server, services, latency, alerts, repository, security, recommendations]
+
+# Modules. Everything is off by default; the server module (CPU, memory, disk, load) is
+# always on. A module that is off leaves no trace: no checks, no tiles, no alerts.
+modules:
+  ports: false             # Which ports are open, and which should stay local only.
+  security: false          # Open ports, firewall, SSH, updates and software support: read-only.
+  postgres: false          # Checks the database really answers queries, not just that the service runs.
+  solr: false              # Pings every core and times a real search.
+  backend: false           # REST API, actuator health and its database and Solr dependencies.
+  frontend: false          # Loads the Angular homepage and times it.
+  nginx: false             # HTTP and HTTPS through the web server.
+  ssl: false               # Days until your certificate expires.
+  logs: false              # Counts new errors in DSpace, Tomcat, Solr and nginx logs.
+  repository: false        # Items, bitstreams, communities, collections and storage growth.
+  assetstore: false        # Free space where your files live.
+  incidents: false         # Groups related alerts into one story with a hypothesis.
+
+appearance:
+  theme: system            # system | light | dark

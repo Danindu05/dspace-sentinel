@@ -1,0 +1,63 @@
+# {{ ansible_managed }}
+# DSpace Sentinel — observe-only health dashboard for DSpace (deploy/systemd/dspace-sentinel.service)
+# Paths are quoted where systemd splits on whitespace; '%' is written as '%%'.
+{% set sentinel_dir = dspace_sentinel_install_dir | replace('%', '%%') %}
+
+[Unit]
+Description=DSpace Sentinel — observe-only health dashboard for DSpace
+Documentation=https://github.com/Danindu05/dspace-sentinel
+After=network-online.target
+Wants=network-online.target
+# Restart=on-failure below retries a crash every 5 s; a config error that stops every start
+# ends in "failed" after five tries (see `./sentinel.sh logs`) instead of looping forever.
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User={{ dspace_sentinel_user }}
+Group={{ dspace_sentinel_group }}
+WorkingDirectory={{ sentinel_dir }}
+Environment=PYTHONUNBUFFERED=1
+Environment="SENTINEL_DATA_DIR={{ sentinel_dir }}/data"
+Environment="SENTINEL_CONFIG={{ sentinel_dir }}/config/sentinel.yaml"
+EnvironmentFile=-{{ sentinel_dir }}/config/sentinel.env
+ExecStart="{{ sentinel_dir }}/.venv/bin/python" -m dspace_sentinel serve
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+SyslogIdentifier=dspace-sentinel
+
+# Footprint (SPEC 0.2): stay out of DSpace's way
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUQuota=25%
+MemoryMax=300M
+
+# Hardening (SPEC 11): read-only everywhere except Sentinel's own data and config
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths="{{ sentinel_dir }}/data" "{{ sentinel_dir }}/config"
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

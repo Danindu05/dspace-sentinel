@@ -1,0 +1,10 @@
+{
+  "_source": "GET /server/api on live DSpace sites, 2026-09-26 (build/review/dspace-compat-research.md section 7)",
+  "7.6.6": {"dspaceUI":"https://dspace.ut.ee","dspaceName":"ADA University of Tartu Library","dspaceServer":"https://dspace.ut.ee/server","dspaceVersion":"DSpace 7.6.6","type":"root","_links":{"actuator":{"href":"https://dspace.ut.ee/server/actuator"},"discover":{"href":"https://dspace.ut.ee/server/api/discover"},"self":{"href":"https://dspace.ut.ee/server/api"}}},
+  "8.3": {"dspaceUI":"https://era.ed.ac.uk","dspaceName":"ERA","dspaceServer":"https://era.ed.ac.uk/server","dspaceVersion":"DSpace 8.3","type":"root","_links":{"actuator":{"href":"https://era.ed.ac.uk/server/actuator"},"discover":{"href":"https://era.ed.ac.uk/server/api/discover"},"self":{"href":"https://era.ed.ac.uk/server/api"}}},
+  "8.4": {"dspaceUI":"https://aura.abdn.ac.uk","dspaceName":"Aura","dspaceServer":"https://aura.abdn.ac.uk/server","dspaceVersion":"DSpace 8.4","type":"root","_links":{"self":{"href":"https://aura.abdn.ac.uk/server/api"}}},
+  "9.0": {"dspaceUI":"https://kb.osu.edu","dspaceName":"The Knowledge Bank","dspaceServer":"https://kb.osu.edu/server","dspaceVersion":"DSpace 9.0","type":"root","_links":{"self":{"href":"https://kb.osu.edu/server/api"}}},
+  "9.2": {"dspaceUI":"https://shareok.org","dspaceName":"SHAREOK","dspaceServer":"https://shareok.org/server","dspaceVersion":"DSpace 9.2","type":"root","_links":{"self":{"href":"https://shareok.org/server/api"}}},
+  "10.0": {"dspaceUI":"https://conservancy.umn.edu","dspaceName":"The University of Minnesota Digital Conservancy","dspaceServer":"https://conservancy.umn.edu/server","dspaceVersion":"DSpace 10.0","type":"root","uniqueType":"root.root","_links":{"self":{"href":"https://conservancy.umn.edu/server/api"}}},
+  "8.2-cris": {"dspaceUI":"https://dspace.mit.edu","dspaceName":"MIT Open Scholarship","dspaceServer":"https://dspace.mit.edu/server","dspaceVersion":"DSpace 8.2","crisVersion":"cris-2024.02.04","type":"root","uniqueType":"root.root"}
+}

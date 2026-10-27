@@ -1,0 +1,13 @@
+---
+# Install (or update) DSpace Sentinel on every host in the dspace_servers group.
+#
+#   ansible-galaxy install -r requirements.yml
+#   ansible-playbook -i inventory.ini playbook.yml
+#
+# Variables live in roles/dspace_sentinel/defaults/main.yml; override them per host or group
+# (keep bot tokens, passwords and the auth token in ansible-vault).
+- name: Install DSpace Sentinel next to DSpace
+  hosts: dspace_servers
+  become: true
+  roles:
+    - role: dspace_sentinel

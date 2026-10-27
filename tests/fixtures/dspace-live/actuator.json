@@ -1,0 +1,8 @@
+{
+  "_source": "GET /server/actuator/health, anonymous, every one HTTP 200 (research section 7). admin_view is constructed from DSpace's source, not captured.",
+  "up": {"status":"UP"},
+  "up_with_issues": {"status":"UP_WITH_ISSUES"},
+  "down": {"status":"DOWN"},
+  "up_groups": {"status":"UP","groups":["liveness","readiness"]},
+  "admin_view": {"status":"UP_WITH_ISSUES","components":{"db":{"status":"UP","details":{"database":"PostgreSQL","validationQuery":"isValid()"}},"geoIp":{"status":"UP_WITH_ISSUES","details":{"reason":"The required 'dbfile' configuration is missing in usage-statistics.cfg!"}},"solrSearchCore":{"status":"UP","details":{"status":0,"detectedPathType":"particular core"}},"solrStatisticsCore":{"status":"UP","details":{"status":0,"detectedPathType":"particular core"}},"solrOaiCore":{"status":"UP","details":{"status":0,"detectedPathType":"particular core"}},"solrAuthorityCore":{"status":"UP","details":{"status":0,"detectedPathType":"particular core"}},"seo":{"status":"UP","details":{"sitemap":"OK","robots.txt":"OK","ssr":"OK"}}}}
+}

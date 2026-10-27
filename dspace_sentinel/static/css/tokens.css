@@ -1,0 +1,73 @@
+/* DSpace Sentinel — design tokens (SPEC §12.2). The only place raw values live. */
+:root {
+  color-scheme: light dark;
+  /* spacing: six steps */
+  --s1: 4px; --s2: 8px; --s3: 16px; --s4: 24px; --s5: 32px; --s6: 48px;
+  /* radius: one card radius everywhere, panels/dialogs a touch larger, pills round */
+  --r-card: 22px; --r-panel: 28px; --r-pill: 999px;
+  --r-inner: 12px;   /* squares and insets inside a tile: emoji squares, chart plot, tooltip, report preview */
+  --r-mark: 6px;     /* small marks: kbd keys, availability cells, text-link focus */
+  /* type */
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;   /* numbers + headings, 600/700 */
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;              /* body 400/500 */
+  --fs-11: 0.6875rem;  /* bottom-bar labels in the phone fallback only */
+  --fs-12: 0.75rem; --fs-13: 0.8125rem; --fs-14: 0.875rem; --fs-15: 0.9375rem; --fs-16: 1rem; --fs-18: 1.125rem;
+  --fs-20: 1.25rem; --fs-22: 1.375rem; --fs-28: 1.75rem; --fs-40: 2.5rem;
+  /* neutrals (flip in dark) */
+  --bg: light-dark(#F6F2E8, #14130F);          /* cream / warm black */
+  --surface: light-dark(#FFFDF8, #1D1B16);     /* tile fill */
+  --surface-2: light-dark(#F1ECDF, #26231D);   /* inset (rung rail, chip idle) */
+  --line: light-dark(rgba(23,21,15,.12), rgba(244,239,228,.12));
+  --ink: light-dark(#17150F, #F4EFE4);
+  --ink-2: light-dark(#5B564A, #B8B1A2);
+  --ink-3: light-dark(#8A8477, #857E70);       /* ≥3:1 only: captions, axis ticks */
+  --press: rgba(23,21,15,.08);                 /* 8 % ink tint on press (light) */
+  /* pastels: fixed, never themed; always paired with --on-accent */
+  --mint: #BFEFD8; --butter: #FFE58A; --coral: #FFB3A7; --sky: #C9DDFF; --lilac: #DCD0FF;
+  --on-accent: #17150F;
+  /* dark-ink tints for things drawn on a pastel (fixed in both themes, like the pastels) */
+  --on-accent-2: rgba(23,21,15,.72);       /* secondary text on the accent (Pulse subline) */
+  --on-accent-line: rgba(23,21,15,.32);    /* a ghost button's border on the accent */
+  --on-accent-wash: rgba(23,21,15,.08);    /* hover on the accent, the "Demo data" pill */
+  --on-accent-inset: rgba(255,253,248,.55); /* the emoji square on the active nav pill */
+  --scrim: rgba(23,21,15,.32);             /* behind dialogs and the report panel */
+  --paper: #FFFDF8;                        /* the report preview frame: reports are light-only documents */
+  --accent: var(--sky);                        /* app.js sets to mint/butter/coral by mood */
+  /* status: text (≥4.5:1 on surface) and fills (≥3:1 on surface, used for dots/meters/marks) */
+  --ok-ink: light-dark(#0F6B3F, #7ED9A8);  --ok-fill: light-dark(#178F58, #1E9E63);
+  --warn-ink: light-dark(#7A4E00, #FFD666); --warn-fill: light-dark(#A86F00, #E39B00);
+  --crit-ink: light-dark(#A1261B, #FF9B8C); --crit-fill: #D4432E;
+  --unknown-fill: #8A8477;
+  /* charts: validated with the dataviz palette validator on both surfaces */
+  --chart-1: light-dark(#2F6FD6, #3987E5); --chart-2: light-dark(#E06B2D, #D95926);
+  --chart-3: light-dark(#189B72, #199E70); --chart-grid: var(--line);
+  /* motion */
+  --dur: 160ms; --ease: cubic-bezier(.2,.7,.2,1);
+  --dur-panel: 200ms;                      /* the report panel slides in 200 ms ease-out (SPEC §12.6) */
+}
+:root[data-theme="light"] { color-scheme: light; }  :root[data-theme="dark"] { color-scheme: dark; --press: rgba(244,239,228,.10); }
+@media (prefers-reduced-motion: reduce) { :root { --dur: 0ms; --dur-panel: 0ms; } }
+
+/* Fallback for browsers without light-dark(): the same pairs through media query + data-theme. */
+@supports not (color: light-dark(#000, #fff)) {
+  :root {
+    --bg: #F6F2E8; --surface: #FFFDF8; --surface-2: #F1ECDF; --line: rgba(23,21,15,.12);
+    --ink: #17150F; --ink-2: #5B564A; --ink-3: #8A8477;
+    --ok-ink: #0F6B3F; --ok-fill: #178F58; --warn-ink: #7A4E00; --warn-fill: #A86F00; --crit-ink: #A1261B;
+    --chart-1: #2F6FD6; --chart-2: #E06B2D; --chart-3: #189B72;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14130F; --surface: #1D1B16; --surface-2: #26231D; --line: rgba(244,239,228,.12);
+      --ink: #F4EFE4; --ink-2: #B8B1A2; --ink-3: #857E70; --press: rgba(244,239,228,.10);
+      --ok-ink: #7ED9A8; --ok-fill: #1E9E63; --warn-ink: #FFD666; --warn-fill: #E39B00; --crit-ink: #FF9B8C;
+      --chart-1: #3987E5; --chart-2: #D95926; --chart-3: #199E70;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14130F; --surface: #1D1B16; --surface-2: #26231D; --line: rgba(244,239,228,.12);
+    --ink: #F4EFE4; --ink-2: #B8B1A2; --ink-3: #857E70; --press: rgba(244,239,228,.10);
+    --ok-ink: #7ED9A8; --ok-fill: #1E9E63; --warn-ink: #FFD666; --warn-fill: #E39B00; --crit-ink: #FF9B8C;
+    --chart-1: #3987E5; --chart-2: #D95926; --chart-3: #199E70;
+  }
+}

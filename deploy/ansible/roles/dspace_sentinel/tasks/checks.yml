@@ -1,0 +1,100 @@
+---
+# Refuse Telegram, email and login settings that Sentinel would reject or quietly ignore, and a
+# bind address it would refuse to start on, before the role changes anything. Sentinel ignores
+# keys it does not know, so a misspelt key would drop a bot token or a recipient without a word.
+# Sentinel checks the values themselves (token and chat id shapes, addresses) when it starts.
+
+- name: Check the Telegram bots
+  ansible.builtin.assert:
+    that:
+      - dspace_sentinel_telegram_bots is not string
+      - dspace_sentinel_telegram_bots is not mapping
+      - dspace_sentinel_telegram_bots | length <= 5
+      - dspace_sentinel_telegram_bots | reject('mapping') | list | length == 0
+      - >-
+        dspace_sentinel_telegram_bots | map('list') | flatten
+        | difference(['id', 'label', 'bot_token', 'chat_id', 'min_severity']) | length == 0
+      - >-
+        dspace_sentinel_telegram_bots | map(attribute='min_severity', default='warning')
+        | map('default', 'warning', true) | difference(['warning', 'critical']) | length == 0
+      - not (dspace_sentinel_telegram.chats | default([]))
+      - >-
+        not (dspace_sentinel_telegram_bots and (dspace_sentinel_telegram_bot_token
+        or dspace_sentinel_telegram.chat_id | default('')))
+    fail_msg: >-
+      dspace_sentinel_telegram_bots lists at most 5 bots, each a mapping of label, bot_token,
+      chat_id and min_severity (warning or critical), plus an optional id. Once you use it, move
+      the old single bot (dspace_sentinel_telegram_bot_token and dspace_sentinel_telegram.chat_id)
+      into the list and leave those two empty. Bots never go in dspace_sentinel_telegram.chats.
+    quiet: true
+
+- name: Check the quiet hours and digest times are quoted
+  ansible.builtin.assert:
+    that:
+      - dspace_sentinel_telegram.quiet_hours | default('') is string
+      - dspace_sentinel_telegram.daily_digest | default('') is string
+      - dspace_sentinel_email.quiet_hours | default('') is string
+      - dspace_sentinel_email.daily_digest | default('') is string
+    fail_msg: >-
+      Quote the times in dspace_sentinel_telegram and dspace_sentinel_email, for example
+      daily_digest: "18:00" and quiet_hours: "23:00-07:00" ("" = off). Unquoted, YAML reads 18:00
+      as the number 1080 and Sentinel refuses to start.
+    quiet: true
+
+- name: Check the email recipients
+  ansible.builtin.assert:
+    that:
+      - not (dspace_sentinel_email.password | default(''))
+      - not (dspace_sentinel_email.recipients | default([]))
+      - dspace_sentinel_email_recipients is not string
+      - dspace_sentinel_email_recipients is not mapping
+      - dspace_sentinel_email_recipients | length <= 5
+      - dspace_sentinel_email_recipients | reject('mapping') | list | length == 0
+      - >-
+        dspace_sentinel_email_recipients | map('list') | flatten
+        | difference(['address', 'label', 'min_severity']) | length == 0
+      - >-
+        dspace_sentinel_email_recipients | map(attribute='address', default='') | select | list
+        | length == dspace_sentinel_email_recipients | length
+      - >-
+        dspace_sentinel_email_recipients | map(attribute='min_severity', default='warning')
+        | map('default', 'warning', true) | difference(['warning', 'critical']) | length == 0
+    fail_msg: >-
+      dspace_sentinel_email_recipients lists at most 5 recipients, each a mapping with an address
+      and, if you like, a label and min_severity (warning or critical). The app password goes in
+      dspace_sentinel_email_password (vault it) and the recipients in
+      dspace_sentinel_email_recipients, never inside dspace_sentinel_email.
+    quiet: true
+
+- name: Check the dashboard login
+  ansible.builtin.assert:
+    that:
+      - >-
+        not (dspace_sentinel_login_password_hash | default('', true) | string)
+        or (dspace_sentinel_login_user | default('', true) | string) is match('^[A-Za-z0-9._@-]{1,64}$')
+      - >-
+        not (dspace_sentinel_login_password_hash | default('', true) | string)
+        or (dspace_sentinel_login_password_hash | string) is match('^(scrypt|pbkdf2_sha256)[$]')
+    fail_msg: >-
+      dspace_sentinel_login_user is 1 to 64 letters, digits and . - _ @, and
+      dspace_sentinel_login_password_hash is a hash made with ./sentinel.sh hash-password (it
+      starts with scrypt$ or pbkdf2_sha256$), never the password itself. Vault the hash.
+    quiet: true
+
+- name: Check that Sentinel may listen on dspace_sentinel_host
+  ansible.builtin.assert:
+    that:
+      - >-
+        (dspace_sentinel_host | string | trim | lower) in ['localhost', '::1', '[::1]']
+        or (dspace_sentinel_host | string | trim) is match('127[.]')
+        or (dspace_sentinel_login_password_hash | default('', true) | string | length > 0)
+        or (dspace_sentinel_auth_token | default('', true) | string | length > 0)
+        or (dspace_sentinel_allow_unauthenticated | bool)
+        or ((dspace_sentinel_env | default({}, true)).SENTINEL_AUTH_TOKEN | default('', true) | string | length > 0)
+        or ((dspace_sentinel_env | default({}, true)).SENTINEL_ALLOW_OPEN | default('', true) | string | trim == '1')
+    fail_msg: >-
+      dspace_sentinel_host is reachable from other machines, so Sentinel refuses to start without
+      a login (dspace_sentinel_login_password_hash, made with ./sentinel.sh hash-password), a token
+      (dspace_sentinel_auth_token) or dspace_sentinel_allow_unauthenticated: true. Or keep
+      127.0.0.1 and publish Sentinel through the nginx snippet.
+    quiet: true

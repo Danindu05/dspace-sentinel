@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  role_name: dspace_sentinel
+  namespace: danindu05
+  author: DSpace Sentinel contributors
+  description: Install DSpace Sentinel, the observe-only health dashboard for DSpace 7, 8 and 9 servers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+    - name: Debian
+      versions:
+        - bookworm
+  galaxy_tags:
+    - dspace
+    - monitoring
+    - observability
+    - repository
+
+dependencies: []

@@ -1,0 +1,77 @@
+# DSpace Sentinel behind nginx — reverse proxy with HTTP Basic auth.
+#
+# Sentinel listens on 127.0.0.1:9765 only. Instead of exposing that port, publish it under
+# /sentinel/ on the nginx server block that already serves your repository (TLS included).
+# Every Sentinel URL is relative, so the prefix just works (SSE stream included).
+#
+#   1. Create the password file (any user name; pick a strong password):
+#        sudo apt install apache2-utils
+#        sudo htpasswd -c /etc/nginx/.dspace-sentinel-htpasswd admin
+#   2. Save this file as /etc/nginx/snippets/dspace-sentinel.conf and include it inside the
+#      `server { ... }` block for your repository host:
+#        include /etc/nginx/snippets/dspace-sentinel.conf;
+#   3. Test and reload:
+#        sudo nginx -t && sudo systemctl reload nginx
+#
+#   Then open https://repo.example.org/sentinel/
+#
+# Sentinel only answers to host names it knows (DNS-rebinding protection). This block forwards
+# the repository's name (Host $host), which is accepted once dspace.public_url in
+# config/sentinel.yaml names it (discovery sets it from an https dspace.ui.url); otherwise add
+# the name to server.allowed_hosts and restart Sentinel.
+#
+# With the dashboard login (./sentinel.sh set-password) Sentinel asks for a password itself, so
+# auth_basic here is optional: keep it as a second gate, or drop the two auth_basic lines and let
+# the login do it. Keep TLS either way, so the password never travels in plain text. A
+# server.auth_token (for scripts) also works behind nginx: it forwards the Authorization header.
+
+location = /sentinel {
+    return 301 /sentinel/;
+}
+
+location /sentinel/ {
+    auth_basic           "DSpace Sentinel";
+    auth_basic_user_file /etc/nginx/.dspace-sentinel-htpasswd;
+
+    proxy_pass         http://127.0.0.1:9765/;
+    proxy_http_version 1.1;
+    proxy_set_header   Host               $host;
+    proxy_set_header   X-Real-IP          $remote_addr;
+    proxy_set_header   X-Forwarded-For    $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto  $scheme;
+    proxy_set_header   X-Forwarded-Prefix /sentinel;
+    proxy_set_header   Connection         "";
+    proxy_redirect     off;
+
+    # Server-sent events (/sentinel/api/stream) need an unbuffered, long-lived connection.
+    proxy_buffering       off;
+    proxy_cache           off;
+    proxy_read_timeout    1h;
+    proxy_send_timeout    1h;
+    gzip                  off;
+    client_max_body_size  1m;
+}
+
+# --- Alternative: a dedicated host name ------------------------------------------------------
+# Add the name to config/sentinel.yaml first, or Sentinel answers 400 "unknown host":
+#   server:
+#     allowed_hosts: [sentinel.example.org]
+# server {
+#     listen 443 ssl http2;
+#     server_name sentinel.example.org;
+#     ssl_certificate     /etc/letsencrypt/live/sentinel.example.org/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/sentinel.example.org/privkey.pem;
+#
+#     location / {
+#         auth_basic           "DSpace Sentinel";
+#         auth_basic_user_file /etc/nginx/.dspace-sentinel-htpasswd;
+#         proxy_pass         http://127.0.0.1:9765/;
+#         proxy_http_version 1.1;
+#         proxy_set_header   Host              $host;
+#         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+#         proxy_set_header   X-Forwarded-Proto $scheme;
+#         proxy_set_header   Connection        "";
+#         proxy_buffering    off;
+#         proxy_read_timeout 1h;
+#     }
+# }

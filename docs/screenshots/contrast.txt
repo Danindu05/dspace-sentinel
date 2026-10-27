@@ -1,0 +1,64 @@
+DSpace Sentinel — token contrast (WCAG 2.x relative luminance), measured from css/tokens.css
+=============================================================================================
+
+Surfaces   light: --bg #F6F2E8  --surface #FFFDF8  --surface-2 #F1ECDF
+           dark:  --bg #14130F  --surface #1D1B16  --surface-2 #26231D
+Pass marks AA text 4.5:1 · AA large text / UI 3:1 · AAA text 7:1
+
+Text tokens on the tile surface (--surface), page (--bg) and inset (--surface-2)
+-------------------------------------------------------------------------------
+token        light: surface   bg   surface-2 | dark: surface   bg   surface-2 | use
+--ink              17.95   16.33   15.47     |       15.00   16.21   13.66    | body, titles, values      (AAA)
+--ink-2             7.19    6.53    6.19     |        8.07    8.72    7.35    | subtitles, captions       (AAA)
+--ink-3             3.66    3.33    3.15     |        4.27    4.62    3.89    | axis ticks, chevrons only (>= 3:1, never body text)
+--ok-ink            6.47    5.88    5.57     |       10.14   10.96    9.23    | "Healthy" pill text
+--warn-ink          7.08    6.44    6.10     |       12.34   13.33   11.24    | "Warning" pill text, warn subtitles
+--crit-ink          7.36    6.69    6.34     |        8.45    9.13    7.70    | "Critical" pill text, failing rung messages
+
+Status inks are >= 6.4:1 on every light surface and >= 8.4:1 on every dark surface (AA with room).
+
+Fills (dots, meters, marks, strip cells) — non-text, target >= 3:1
+--------------------------------------------------------------------
+token          light: surface   bg | dark: surface   bg
+--ok-fill            4.05   3.68 |        5.02   5.42
+--warn-fill          4.18   3.80 |        7.34   7.93
+--crit-fill          4.45   4.05 |        3.80   4.11
+--unknown-fill       3.66   3.33 |        4.63   5.00
+Status is never colour-alone: every dot/fill sits next to an emoji mark (✅ ⚠️ ❌ —) or a label.
+
+Pastel accents (fixed in both themes) with --on-accent #17150F
+--------------------------------------------------------------
+--mint   #BFEFD8  14.39 : 1
+--butter #FFE58A  14.62 : 1
+--coral  #FFB3A7  10.65 : 1
+--sky    #C9DDFF  13.27 : 1
+--lilac  #DCD0FF  12.61 : 1
+Text on any accent (Pulse band, active tab, "+ New report", checked chips, toggles) is dark ink at >= 10.6:1.
+The Pulse subline uses --on-accent-2 rgba(23,21,15,.72) over the accent: mint 6.47, butter 6.53,
+coral 5.49, sky 6.19, lilac 6.05 -> >= 5.48:1 on every pastel (AA).
+
+Chart palette (dataviz validator, categorical, adjacent pairs; scripts/validate_palette.py)
+-------------------------------------------------------------------------------------------
+light  --chart-1 #2F6FD6  --chart-2 #E06B2D  --chart-3 #189B72  on #FFFDF8
+       lightness band PASS · chroma floor PASS · CVD separation PASS (worst adjacent ΔE 8.9 protan)
+       normal-vision floor PASS (ΔE 25.3) · contrast vs surface PASS (4.73 / 3.27 / 3.46)
+dark   --chart-1 #3987E5  --chart-2 #D95926  --chart-3 #199E70  on #1D1B16
+       lightness band PASS · chroma floor PASS · CVD separation PASS (worst adjacent ΔE 9.4 deutan)
+       normal-vision floor PASS (ΔE 26.5) · contrast vs surface PASS (4.73 / 4.43 / 5.05)
+At most three series are ever drawn (Network: two; latency: one). Every chart has a "Show as table"
+twin, a legend from two series up and a crosshair tooltip, so no value depends on hue alone.
+Threshold hairlines use --warn-fill / --crit-fill; their 12 px labels ("Warning 80 %") use --warn-ink /
+--crit-ink and carry a --surface halo (paint-order).
+
+Other pairs
+-----------
+snackbar  --bg text on --ink       16.33 (light) / 16.21 (dark)
+snackbar action (Undo / Open)     accent pill with --on-accent ink: 10.65 on --coral, the weakest pastel;
+                                  its 1 px var(--bg) edge against the bar: 16.33 (light) / 16.21 (dark)
+chart threshold labels            --warn-ink 7.08 / --crit-ink 7.36 on --surface (light);
+                                  12.34 / 8.45 (dark)
+version line (--ink-2 on --surface)          7.19 (light) / 8.07 (dark)
+onboarding step (--ink-2 on --bg)            6.53 (light) / 8.72 (dark)
+stale pill "Sentinel unreachable" (--ink-2 on --surface-2)   6.19 (light) / 7.35 (dark)
+focus ring  2 px --ink, offset 2   17.95 on surface (light) / 15.00 (dark); only via :focus-visible
+lines      --line is a 12 % ink tint: decorative separators, never the only boundary of a control

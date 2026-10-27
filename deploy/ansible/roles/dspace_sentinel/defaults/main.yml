@@ -1,0 +1,221 @@
+---
+# dspace_sentinel role — every variable, with the same defaults as config/sentinel.example.yaml
+# unless noted. Override per host/group; keep secrets (marked "vault") in ansible-vault.
+
+# --- installation ------------------------------------------------------------------------
+dspace_sentinel_repo: https://github.com/Danindu05/dspace-sentinel.git
+dspace_sentinel_version: main                  # branch, tag or commit; pin a release tag once
+                                               # releases are published
+dspace_sentinel_install_dir: /opt/dspace-sentinel
+dspace_sentinel_user: sentinel
+dspace_sentinel_group: sentinel
+dspace_sentinel_extra_groups: []               # e.g. [adm] to read /var/log, or the dspace group for /dspace/log
+dspace_sentinel_python: python3                # interpreter that creates .venv (must be >= 3.10)
+dspace_sentinel_apt_packages:
+  - git
+  - python3
+  - python3-venv
+  - acl                                        # setfacl: become_user to the unprivileged service user
+dspace_sentinel_manage_apt: true               # false on non-Debian hosts or when packages are managed elsewhere
+dspace_sentinel_manage_config: true            # false = write config/sentinel.yaml only when missing;
+                                               # the web UI then owns it and Ansible never overwrites it
+dspace_sentinel_service_enabled: true
+dspace_sentinel_service_state: started         # started | stopped
+dspace_sentinel_no_log: true                   # hide the rendered config (it may contain secrets) from the output
+dspace_sentinel_env: {}                        # vault. Extra environment for Sentinel, written to
+                                               # config/sentinel.env (0600) when not empty; the unit
+                                               # and ./sentinel.sh both read it. Example, to keep the
+                                               # email app password out of config/sentinel.yaml:
+                                               # {SENTINEL_SMTP_PASSWORD: "{{ vault_sentinel_gmail_app_password }}"}
+
+# --- server ------------------------------------------------------------------------------
+dspace_sentinel_host: 127.0.0.1                # 0.0.0.0 exposes Sentinel directly; prefer the nginx snippet
+dspace_sentinel_port: 9765
+dspace_sentinel_auth_token: ""                 # vault. A token for scripts (Bearer, or HTTP Basic with
+                                               # any user name); without a login the dashboard asks for it
+dspace_sentinel_login_user: admin              # the dashboard login: its username (1-64 letters, digits, . - _ @)
+dspace_sentinel_login_password_hash: ""        # vault. Its password hash, made with ./sentinel.sh hash-password
+                                               # ("" = no login). With it the web UI asks people to sign in
+                                               # and a non-loopback dspace_sentinel_host may listen.
+dspace_sentinel_hostname: ""                   # label in the UI and alerts; "" = the machine's hostname
+dspace_sentinel_allowed_hosts: []              # extra names accepted in the Host header; with the nginx
+                                               # snippet enabled the role adds inventory_hostname itself
+dspace_sentinel_allow_unauthenticated: false   # true = serve a non-loopback host without a login or auth_token
+                                               # (only when a firewall already guards the port)
+
+# --- onboarding --------------------------------------------------------------------------
+dspace_sentinel_setup_completed: true          # managed hosts skip the first-run wizard
+dspace_sentinel_persona: full                  # full | backend | frontend | server | ""
+
+# --- modules (the role switches the full stack on; the app's own default is everything off) ---
+dspace_sentinel_modules:
+  ports: true
+  security: true                               # read-only: open ports, firewall, SSH, updates, software support
+  postgres: true
+  solr: true
+  backend: true
+  frontend: true
+  nginx: true
+  ssl: true
+  logs: true
+  repository: true
+  assetstore: true
+  incidents: true
+
+# --- collector intervals (seconds) and retention -----------------------------------------
+dspace_sentinel_collector:
+  system_interval: 15
+  service_interval: 30
+  http_interval: 30
+  db_interval: 60
+  logs_interval: 60
+  repository_interval: 900
+  security_interval: 900                       # the Security module's checks (60 … 86400)
+  retention_days: 30
+
+# --- DSpace ------------------------------------------------------------------------------
+dspace_sentinel_dspace:
+  install_dir: /dspace
+  auto_discover: true
+  server_url: http://localhost:8080/server
+  ui_url: http://localhost:4000
+  public_url: ""                               # e.g. https://repo.example.org
+  assetstore_dir: /dspace/assetstore
+  log_dir: /dspace/log
+  backend_service: tomcat9                     # systemd unit of the REST API; "" skips the rung
+  frontend_service: dspace-ui
+  verify_tls: true
+
+# --- PostgreSQL --------------------------------------------------------------------------
+dspace_sentinel_postgres:
+  host: localhost
+  port: 5432
+  database: dspace
+  user: dspace
+  sslmode: prefer
+  service: postgresql
+dspace_sentinel_postgres_password: ""          # vault. A read-only role is enough (Sentinel only SELECTs)
+
+# --- Solr --------------------------------------------------------------------------------
+dspace_sentinel_solr:
+  url: http://localhost:8983/solr
+  cores:
+    - search
+    - statistics
+    - oai
+    - authority
+  service: solr
+
+# --- nginx and TLS -----------------------------------------------------------------------
+dspace_sentinel_nginx:
+  service: nginx
+  http_url: http://localhost
+  https_url: ""                                # e.g. https://repo.example.org
+dspace_sentinel_ssl:
+  host: ""                                     # "" = host of dspace.public_url
+  port: 443
+
+# --- ports: expect open | local_only ------------------------------------------------------
+dspace_sentinel_ports:
+  - {port: 22, label: SSH, expect: open}
+  - {port: 80, label: HTTP, expect: open}
+  - {port: 443, label: HTTPS, expect: open}
+  - {port: 4000, label: Angular, expect: open}
+  - {port: 8080, label: Backend, expect: open}
+  - {port: 8983, label: Solr, expect: local_only}
+  - {port: 5432, label: PostgreSQL, expect: local_only}
+
+# --- logs (a missing file is skipped silently) --------------------------------------------
+dspace_sentinel_logs:
+  files:
+    - {id: dspace, label: DSpace, path: /dspace/log/dspace.log, daily_suffix: true}
+    - {id: tomcat, label: Tomcat, path: /var/log/tomcat9/catalina.out}
+    - {id: solr, label: Solr, path: /var/solr/logs/solr.log}
+    - {id: nginx, label: nginx, path: /var/log/nginx/error.log}
+  window_minutes: 5
+
+# --- alert thresholds --------------------------------------------------------------------
+dspace_sentinel_alerts:
+  confirm_samples: 2
+  clear_samples: 3
+  reminder_minutes: 0
+  cpu: {warning: 80, critical: 95}
+  memory: {warning: 80, critical: 92}
+  swap: {warning: 50, critical: 80}
+  disk: {warning: 80, critical: 90}
+  load_per_core: {warning: 1.5, critical: 3.0}
+  rest_latency_ms: {warning: 1000, critical: 3000}
+  search_latency_ms: {warning: 1500, critical: 4000}
+  home_latency_ms: {warning: 2000, critical: 5000}
+  postgres_connections_pct: {warning: 80, critical: 95}
+  ssl_expiry_days: {warning: 30, critical: 7}
+  log_errors_per_window: {warning: 20, critical: 100}
+  assetstore_free_gb: {warning: 50, critical: 10}
+
+# --- notifiers ---------------------------------------------------------------------------
+# tasks/checks.yml stops the play before anything changes on more than 5 bots or recipients,
+# a key Sentinel does not know (it would silently ignore a misspelt one) or an unquoted time.
+dspace_sentinel_telegram:
+  enabled: false
+  quiet_hours: ""                              # "23:00-07:00" -> only critical alerts in that window
+  daily_digest: ""                             # "08:00" -> one summary per day (quote the times)
+dspace_sentinel_telegram_bots: []              # up to 5 bots, one per person: each makes their own
+                                               # bot with @BotFather and sends it a message first:
+                                               #   - label: Danindu               # optional, <= 40 chars
+                                               #     bot_token: "{{ vault_sentinel_bot_danindu }}"
+                                               #     chat_id: "123456789"         # a person, a group (-100…) or @channelname
+                                               #     min_severity: warning        # warning = every alert, critical = critical only
+                                               # Sentinel gives each bot a stable id from its position
+                                               # and chat id; an `id:` of your own is kept.
+dspace_sentinel_telegram_bot_token: ""         # vault. The single bot of older inventories: with
+                                               # dspace_sentinel_telegram.chat_id it becomes one bot.
+                                               # Leave both empty once you use the list above.
+dspace_sentinel_email:                         # Gmail, or any SMTP server
+  enabled: false
+  smtp_host: smtp.gmail.com
+  smtp_port: 587                               # Gmail: 587 with starttls, or 465 with ssl
+  security: starttls                           # starttls | ssl | none (no TLS: only a relay that
+                                               # needs no login, or one on this host)
+  username: ""                                 # the Gmail address Sentinel logs in with
+  from_address: ""                             # "" = username
+  from_name: DSpace Sentinel
+  quiet_hours: ""                              # like Telegram's, for email only
+  daily_digest: ""                             # "08:00" -> one summary email per day
+dspace_sentinel_email_recipients: []           # up to 5; each alert is one email to everyone it concerns:
+                                               #   - address: ops@example.org
+                                               #     label: On call               # optional, <= 40 chars
+                                               #     min_severity: warning        # warning = every alert, critical = critical only
+dspace_sentinel_email_password: ""             # vault. Gmail: an app password (Google Account >
+                                               # Security > 2-Step Verification > App passwords),
+                                               # never the account's normal password
+dspace_sentinel_webhook:
+  enabled: false
+  url: ""
+
+# --- reports -----------------------------------------------------------------------------
+dspace_sentinel_reports:
+  weekly: {enabled: false, weekday: 1, hour: 8, send_telegram: false, send_email: false}
+  default_sections:
+    - summary
+    - server
+    - services
+    - latency
+    - alerts
+    - repository
+    - security
+    - recommendations
+
+# --- appearance --------------------------------------------------------------------------
+dspace_sentinel_theme: system                  # system | light | dark
+
+# --- optional nginx reverse-proxy snippet with basic auth ---------------------------------
+# Drops a `location /sentinel/` snippet and an htpasswd file; you include the snippet in the
+# server block that serves your repository (see deploy/nginx/sentinel.conf.example).
+dspace_sentinel_nginx_snippet_enabled: false
+dspace_sentinel_nginx_snippet_path: /etc/nginx/snippets/dspace-sentinel.conf
+dspace_sentinel_nginx_location: /sentinel/     # must end with /
+dspace_sentinel_nginx_htpasswd_path: /etc/nginx/.dspace-sentinel-htpasswd
+dspace_sentinel_nginx_htpasswd_user: sentinel
+dspace_sentinel_nginx_htpasswd_password: ""    # vault. Required when the snippet is enabled
+dspace_sentinel_nginx_htpasswd_group: www-data
+dspace_sentinel_nginx_reload: true             # reload nginx after changing the snippet or password

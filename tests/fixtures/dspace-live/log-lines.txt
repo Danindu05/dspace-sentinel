@@ -1,0 +1,5 @@
+2026-09-26 10:41:02,123 ERROR 3f1c2e7a-0000-4000-8000-000000000001 unknown org.dspace.app.rest.exception.DSpaceApiExceptionControllerAdvice @ An exception has occurred (status:500)
+26-Sep-2026 10:41:02.123 SEVERE [main] org.apache.catalina.core.StandardContext.startInternal One or more listeners failed to start.
+[2026-09-26 10:41:02] [crit]One or more listeners failed to start. Full details will be found in the appropriate container log file
+[2026-09-26 10:41:02] [warning]The web application [server] appears to have started a thread named [...] but has failed to stop it
+2026-09-26 10:41:02.123 ERROR (qtp1-23) [   x:search] o.a.s.c.SolrCore org.apache.solr.common.SolrException: ...

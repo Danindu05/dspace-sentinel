@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DSpace Sentinel</title>
+  <meta name="description" content="Health, history and alerts for this DSpace server.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script>
+    // Apply the pinned theme before first paint (mirrors appearance.theme; app.js reconciles with the server).
+    (function () {
+      try {
+        var t = localStorage.getItem('sentinel.theme');
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.setAttribute('data-theme', t);
+          var m = document.querySelector('meta[name="color-scheme"]');
+          if (m) m.setAttribute('content', t);
+        }
+      } catch (e) { /* storage unavailable: system theme */ }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+  <!-- Import map: every static `import` inside the modules resolves to its ?v= URL, so a new
+       release is never served from the one-hour asset cache. Keep in sync with static/js/**. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "./static/js/api.js": "./static/js/api.js?v=0.1.0",
+      "./static/js/app.js": "./static/js/app.js?v=0.1.0",
+      "./static/js/charts.js": "./static/js/charts.js?v=0.1.0",
+      "./static/js/panels/report.js": "./static/js/panels/report.js?v=0.1.0",
+      "./static/js/screens/detail/component.js": "./static/js/screens/detail/component.js?v=0.1.0",
+      "./static/js/screens/detail/incident.js": "./static/js/screens/detail/incident.js?v=0.1.0",
+      "./static/js/screens/detail/report.js": "./static/js/screens/detail/report.js?v=0.1.0",
+      "./static/js/screens/detail/security.js": "./static/js/screens/detail/security.js?v=0.1.0",
+      "./static/js/screens/detail/server.js": "./static/js/screens/detail/server.js?v=0.1.0",
+      "./static/js/screens/history.js": "./static/js/screens/history.js?v=0.1.0",
+      "./static/js/screens/home.js": "./static/js/screens/home.js?v=0.1.0",
+      "./static/js/screens/more.js": "./static/js/screens/more.js?v=0.1.0",
+      "./static/js/screens/more/about.js": "./static/js/screens/more/about.js?v=0.1.0",
+      "./static/js/screens/more/account.js": "./static/js/screens/more/account.js?v=0.1.0",
+      "./static/js/screens/more/alerts.js": "./static/js/screens/more/alerts.js?v=0.1.0",
+      "./static/js/screens/more/appearance.js": "./static/js/screens/more/appearance.js?v=0.1.0",
+      "./static/js/screens/more/connection.js": "./static/js/screens/more/connection.js?v=0.1.0",
+      "./static/js/screens/more/destinations.js": "./static/js/screens/more/destinations.js?v=0.1.0",
+      "./static/js/screens/more/email.js": "./static/js/screens/more/email.js?v=0.1.0",
+      "./static/js/screens/more/form.js": "./static/js/screens/more/form.js?v=0.1.0",
+      "./static/js/screens/more/modules.js": "./static/js/screens/more/modules.js?v=0.1.0",
+      "./static/js/screens/more/reports.js": "./static/js/screens/more/reports.js?v=0.1.0",
+      "./static/js/screens/more/telegram.js": "./static/js/screens/more/telegram.js?v=0.1.0",
+      "./static/js/screens/onboarding.js": "./static/js/screens/onboarding.js?v=0.1.0",
+      "./static/js/screens/signin.js": "./static/js/screens/signin.js?v=0.1.0",
+      "./static/js/screens/stack.js": "./static/js/screens/stack.js?v=0.1.0",
+      "./static/js/store.js": "./static/js/store.js?v=0.1.0",
+      "./static/js/ui.js": "./static/js/ui.js?v=0.1.0"
+    }
+  }
+  </script>
+  <link rel="stylesheet" href="static/css/tokens.css?v=0.1.0">
+  <link rel="stylesheet" href="static/css/app.css?v=0.1.0">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div id="app" class="shell" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="#/home">
+        <span class="brand-mark" aria-hidden="true">🛰️</span>
+        <span class="brand-text">
+          <span class="brand-name">DSpace Sentinel</span>
+          <span class="brand-host" id="brand-host">…</span>
+        </span>
+      </a>
+
+      <nav class="nav" aria-label="Main">
+        <a class="nav-item" data-tab="home" href="#/home" title="Home (1)">
+          <span class="nav-emoji" aria-hidden="true">🏠</span><span class="nav-label">Home</span>
+        </a>
+        <a class="nav-item" data-tab="stack" href="#/stack" title="Stack (2)">
+          <span class="nav-emoji" aria-hidden="true">📚</span><span class="nav-label">Stack</span>
+        </a>
+        <button class="nav-new" id="new-report" type="button" title="New report (n)">
+          <span class="nav-new-plus" aria-hidden="true">＋</span><span class="nav-new-label">New report</span>
+        </button>
+        <a class="nav-item" data-tab="history" href="#/history" title="History (3)">
+          <span class="nav-emoji" aria-hidden="true">📈</span><span class="nav-label">History</span>
+        </a>
+        <a class="nav-item" data-tab="more" href="#/more" title="More (4)">
+          <span class="nav-emoji" aria-hidden="true">⚙️</span><span class="nav-label">More</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <p class="mood-line" id="mood-line"><span class="dot dot--unknown" aria-hidden="true"></span><span class="mood-mark" aria-hidden="true" hidden>⚠️</span><span class="mood-text">Connecting…</span></p>
+        <button class="btn btn--ghost btn--full" id="check-now" type="button" title="Check now (r)">↻ Check now</button>
+        <div class="theme-switch" id="theme-switch"></div>
+        <div class="account-line" id="account-line" hidden>
+          <span class="account-who"><span aria-hidden="true">👤</span><span class="sr-only">Signed in as</span> <span id="account-name"></span></span>
+          <button class="btn btn--ghost btn--sm" id="sign-out" type="button">Sign out</button>
+        </div>
+        <p class="version"><span id="version">Sentinel</span> · <button class="link-btn" id="shortcuts-btn" type="button" aria-haspopup="dialog">Shortcuts ?</button></p>
+      </div>
+    </aside>
+
+    <main id="main" class="main" tabindex="-1">
+      <header class="page-head" id="page-head">
+        <div class="page-head-title">
+          <button class="back-btn" id="back-btn" type="button" aria-label="Back" hidden>‹</button>
+          <h1 class="page-title" id="page-title" tabindex="-1">Home</h1>
+        </div>
+        <div class="page-controls" id="page-controls"></div>
+      </header>
+      <div id="views" class="views"></div>
+    </main>
+  </div>
+
+  <div id="gate" class="gate" hidden></div>
+
+  <div id="snackbar" class="snackbar-region" aria-live="polite" aria-atomic="true"></div>
+
+  <noscript><p class="noscript">DSpace Sentinel needs JavaScript. The JSON API is still available at <a href="api/status">api/status</a>.</p></noscript>
+
+  <script type="module" src="static/js/app.js?v=0.1.0"></script>
+</body>
+</html>

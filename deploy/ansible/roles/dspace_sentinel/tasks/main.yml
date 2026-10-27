@@ -1,0 +1,123 @@
+---
+# Install DSpace Sentinel from git into a virtualenv, write its config, run it under systemd.
+# Everything is idempotent: re-running with the same variables changes nothing.
+
+- name: Check the Telegram and email settings before changing anything
+  ansible.builtin.import_tasks: checks.yml
+
+- name: Install prerequisites (git, python3, venv)
+  ansible.builtin.apt:
+    name: "{{ dspace_sentinel_apt_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - dspace_sentinel_manage_apt | bool
+    - ansible_facts['os_family'] == 'Debian'
+
+- name: Create the service group
+  ansible.builtin.group:
+    name: "{{ dspace_sentinel_group }}"
+    system: true
+
+- name: Create the service user
+  ansible.builtin.user:
+    name: "{{ dspace_sentinel_user }}"
+    group: "{{ dspace_sentinel_group }}"
+    groups: "{{ dspace_sentinel_extra_groups }}"
+    append: true
+    system: true
+    home: "{{ dspace_sentinel_install_dir }}"
+    create_home: false
+    shell: /usr/sbin/nologin
+    comment: DSpace Sentinel
+
+- name: Create the install directory
+  ansible.builtin.file:
+    path: "{{ dspace_sentinel_install_dir }}"
+    state: directory
+    owner: "{{ dspace_sentinel_user }}"
+    group: "{{ dspace_sentinel_group }}"
+    mode: "0750"
+
+- name: Check out DSpace Sentinel ({{ dspace_sentinel_version }})
+  ansible.builtin.git:
+    repo: "{{ dspace_sentinel_repo }}"
+    dest: "{{ dspace_sentinel_install_dir }}"
+    version: "{{ dspace_sentinel_version }}"
+    update: true
+    force: false
+  become: true
+  become_user: "{{ dspace_sentinel_user }}"
+  register: dspace_sentinel_checkout
+  notify: Restart dspace-sentinel
+
+- name: Create the virtualenv and install the Python requirements
+  ansible.builtin.pip:
+    requirements: "{{ dspace_sentinel_install_dir }}/requirements.txt"
+    virtualenv: "{{ dspace_sentinel_install_dir }}/.venv"
+    virtualenv_command: "{{ dspace_sentinel_python }} -m venv"
+  become: true
+  become_user: "{{ dspace_sentinel_user }}"
+  notify: Restart dspace-sentinel
+
+- name: Create the data and config directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ dspace_sentinel_user }}"
+    group: "{{ dspace_sentinel_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ dspace_sentinel_install_dir }}/data", mode: "0700"}
+    - {path: "{{ dspace_sentinel_install_dir }}/data/reports", mode: "0700"}
+    - {path: "{{ dspace_sentinel_install_dir }}/config", mode: "0750"}
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Write config/sentinel.yaml
+  ansible.builtin.template:
+    src: sentinel.yaml.j2
+    dest: "{{ dspace_sentinel_install_dir }}/config/sentinel.yaml"
+    owner: "{{ dspace_sentinel_user }}"
+    group: "{{ dspace_sentinel_group }}"
+    mode: "0600"
+    force: "{{ dspace_sentinel_manage_config | bool }}"
+  no_log: "{{ dspace_sentinel_no_log | bool }}"
+  notify: Restart dspace-sentinel
+
+- name: Write config/sentinel.env (extra environment for the unit and the CLI)
+  ansible.builtin.template:
+    src: sentinel.env.j2
+    dest: "{{ dspace_sentinel_install_dir }}/config/sentinel.env"
+    owner: "{{ dspace_sentinel_user }}"
+    group: "{{ dspace_sentinel_group }}"
+    mode: "0600"
+  no_log: "{{ dspace_sentinel_no_log | bool }}"
+  when: dspace_sentinel_env | length > 0
+  notify: Restart dspace-sentinel
+
+- name: Install the systemd unit
+  ansible.builtin.template:
+    src: dspace-sentinel.service.j2
+    dest: /etc/systemd/system/dspace-sentinel.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart dspace-sentinel
+
+- name: Reload systemd and restart before enabling the unit
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start dspace-sentinel
+  ansible.builtin.systemd:
+    name: dspace-sentinel
+    enabled: "{{ dspace_sentinel_service_enabled | bool }}"
+    state: "{{ dspace_sentinel_service_state }}"
+    daemon_reload: true
+
+- name: Configure the optional nginx snippet
+  ansible.builtin.include_tasks: nginx.yml
+  when: dspace_sentinel_nginx_snippet_enabled | bool

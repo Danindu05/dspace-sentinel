@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DSpace Sentinel">
+  <rect width="64" height="64" rx="16" fill="#BFEFD8"/>
+  <!-- pulse line -->
+  <path d="M10 36h10l4-12 6 24 6-18 4 6h14" fill="none" stroke="#17150F" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- satellite dish + beam -->
+  <circle cx="46" cy="18" r="4" fill="#17150F"/>
+  <path d="M38 12a10 10 0 0 1 12 12" fill="none" stroke="#17150F" stroke-width="3" stroke-linecap="round"/>
+  <path d="M34 6a16 16 0 0 1 20 18" fill="none" stroke="#17150F" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+</svg>

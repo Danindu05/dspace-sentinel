@@ -1,0 +1,100 @@
+{#- Render the whole DSpace Sentinel configuration (SPEC section 3) from the role variables. -#}
+{#- The nginx snippet forwards the host name the repository is reached under (Host $host), so
+    the inventory name is accepted too while the snippet is enabled. -#}
+{%- set _snippet_hosts = [inventory_hostname] if dspace_sentinel_nginx_snippet_enabled | bool else [] -%}
+{#- Every secret goes through `string`: an inline `!vault` value then renders as its plain text
+    (ansible-core before 2.19 would otherwise write the ciphertext), and `null` as "". -#}
+{#- Telegram: up to 5 bots, each with its own token and chat (dspace_sentinel_telegram_bots).
+    Sentinel derives a stable id from each bot's position and chat id; an `id` given here is kept.
+    The single bot of older inventories (dspace_sentinel_telegram.chat_id plus
+    dspace_sentinel_telegram_bot_token) becomes one bot; tasks/checks.yml refuses both at once. -#}
+{%- set _chats = [] -%}
+{%- for bot in dspace_sentinel_telegram_bots -%}
+  {%- set _chat = {
+    "label": bot.label | default('', true) | string,
+    "bot_token": bot.bot_token | default('', true) | string,
+    "chat_id": bot.chat_id | default('', true) | string,
+    "min_severity": bot.min_severity | default('warning', true) | string,
+  } -%}
+  {%- if bot.id | default('', true) -%}
+    {%- set _ = _chat.update({"id": bot.id | string}) -%}
+  {%- endif -%}
+  {%- set _ = _chats.append(_chat) -%}
+{%- endfor -%}
+{%- set _old_token = dspace_sentinel_telegram_bot_token | default('', true) | string | trim -%}
+{%- set _old_chat_id = dspace_sentinel_telegram.chat_id | default('', true) | string | trim -%}
+{%- if not _chats and (_old_token or _old_chat_id) -%}
+  {%- set _ = _chats.append({
+    "label": "",
+    "bot_token": _old_token,
+    "chat_id": _old_chat_id,
+    "min_severity": "warning",
+  }) -%}
+{%- endif -%}
+{%- set _telegram = {} -%}
+{%- for key, value in dspace_sentinel_telegram.items() if key not in ["bot_token", "chat_id", "chats"] -%}
+  {%- set _ = _telegram.update({key: value}) -%}
+{%- endfor -%}
+{%- set _ = _telegram.update({"chats": _chats}) -%}
+{#- Email: dspace_sentinel_email as given, plus the recipients and the app password. -#}
+{%- set _recipients = [] -%}
+{%- for recipient in dspace_sentinel_email_recipients -%}
+  {%- set _ = _recipients.append({
+    "address": recipient.address | default('', true) | string,
+    "label": recipient.label | default('', true) | string,
+    "min_severity": recipient.min_severity | default('warning', true) | string,
+  }) -%}
+{%- endfor -%}
+{%- set _email = dspace_sentinel_email | combine({
+  "password": dspace_sentinel_email_password | default('', true) | string,
+  "recipients": _recipients,
+}) -%}
+{%- set _cfg = {
+  "server": {
+    "host": dspace_sentinel_host,
+    "port": dspace_sentinel_port | int,
+    "auth_token": dspace_sentinel_auth_token | default('', true) | string,
+    "login": {
+      "username": dspace_sentinel_login_user | default('', true) | string,
+      "password_hash": dspace_sentinel_login_password_hash | default('', true) | string,
+    },
+    "hostname": dspace_sentinel_hostname,
+    "allowed_hosts": (dspace_sentinel_allowed_hosts + _snippet_hosts) | unique | list,
+    "allow_unauthenticated": dspace_sentinel_allow_unauthenticated | bool,
+  },
+  "setup": {
+    "completed": dspace_sentinel_setup_completed | bool,
+    "persona": dspace_sentinel_persona,
+  },
+  "collector": dspace_sentinel_collector,
+  "dspace": dspace_sentinel_dspace,
+  "postgres": dspace_sentinel_postgres | combine({
+    "password": dspace_sentinel_postgres_password | default('', true) | string,
+  }),
+  "solr": dspace_sentinel_solr,
+  "nginx": dspace_sentinel_nginx,
+  "ssl": dspace_sentinel_ssl,
+  "ports": dspace_sentinel_ports,
+  "logs": dspace_sentinel_logs,
+  "alerts": dspace_sentinel_alerts,
+  "notifiers": {
+    "telegram": _telegram,
+    "email": _email,
+    "webhook": dspace_sentinel_webhook | combine({
+      "url": dspace_sentinel_webhook.url | default('', true) | string,
+    }),
+  },
+  "reports": dspace_sentinel_reports,
+  "modules": dspace_sentinel_modules,
+  "appearance": {"theme": dspace_sentinel_theme},
+} -%}
+# DSpace Sentinel configuration — {{ ansible_managed }}
+{% if dspace_sentinel_manage_config | bool %}
+# Managed by the dspace_sentinel Ansible role: local edits (including those made through the
+# web UI) are overwritten on the next run. Set dspace_sentinel_manage_config: false to let the
+# UI own this file after the first deployment.
+{% else %}
+# Written once by the dspace_sentinel Ansible role; the web UI owns it from now on.
+{% endif %}
+# Reference: config/sentinel.example.yaml in the checkout.
+{{ _cfg | to_nice_yaml(indent=2, width=1000) }}

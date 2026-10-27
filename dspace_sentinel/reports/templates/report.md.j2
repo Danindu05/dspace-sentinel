@@ -1,0 +1,230 @@
+# {{ meta.title }}
+
+**Host** {{ meta.hostname }} · **Period** {{ meta.range.title }} ({{ meta.range.from|datetime }} → {{ meta.range.to|datetime }}) · **Generated** {{ meta.generated_ts|datetime }} · DSpace Sentinel v{{ meta.sentinel_version }}{% if meta.demo %} · demo data{% endif %}
+
+{% if 'summary' in sections %}
+## 📋 Summary
+
+| Metric | Value |
+|---|---|
+| Health score | {% if summary.health_score is not none %}{{ summary.health_score|score }} / 100{% else %}—{% endif %} |
+| Mean availability | {{ summary.availability_pct|pct(2) }} |
+| Incidents | {{ summary.incidents }} |
+| Alerts opened | {{ summary.alerts_opened }} ({{ summary.alerts_critical }} critical, {{ summary.alerts_warning }} warning) |
+| Worst component | {% if summary.worst_component %}{{ summary.worst_component.emoji }} {{ summary.worst_component.label }} — {{ summary.worst_component.availability_pct|pct(2) }} available{% else %}—{% endif %} |
+| Server uptime | {{ summary.uptime_s|duration }} |
+| Data coverage | {{ summary.samples|number }} samples covering {{ summary.coverage_pct|pct }} of the period |
+
+{% endif %}
+{% if 'server' in sections %}
+## 💻 Server
+
+| Metric | Avg | p95 | Max |
+|---|---:|---:|---:|
+| CPU | {{ server.cpu.avg|pct }} | {{ server.cpu.p95|pct }} | {{ server.cpu.max|pct }} |
+| Memory | {{ server.mem.avg|pct }} | {{ server.mem.p95|pct }} | {{ server.mem.max|pct }} |
+| Swap | {{ server.swap.avg|pct }} | {{ server.swap.p95|pct }} | {{ server.swap.max|pct }} |
+| Disk {{ server.disk.path }} | {{ server.disk.avg|pct }} | — | {{ server.disk.max|pct }} |
+| Load (1 min) | {{ server.load.avg|number(2) }} | {{ server.load.p95|number(2) }} | {{ server.load.max|number(2) }} |
+
+Disk {{ server.disk.path }}: {{ server.disk.free_now|bytes }} free of {{ server.disk.total|bytes }}{% if server.disk.growth_per_day %}, growing {{ server.disk.growth_per_day|bytes }}/day{% endif %}{% if server.disk.days_until_full is not none %} — full in {{ server.disk.days_until_full|days }}{% endif %}.
+Network: {{ server.net.rx_avg|rate }} received, {{ server.net.tx_avg|rate }} sent on average.
+{% if server.os %}{{ server.os }} · kernel {{ server.kernel }}{% if server.cores %} · {{ server.cores }} cores{% endif %}{% if server.mem_total %} · {{ server.mem_total|gb }} RAM{% endif %}{% endif %}
+
+{% endif %}
+{% if 'services' in sections %}
+## 📚 Services
+
+| Service | Availability | Outages | Downtime | Worst status | Avg latency |
+|---|---:|---:|---:|---|---:|
+{% for s in services %}
+| {{ s.emoji }} {{ s.label }} | {{ s.availability_pct|pct(2) }} | {{ s.outages }} | {{ s.downtime_s|duration if s.downtime_s else '—' }} | {{ s.worst_status|status_label }} | {{ s.avg_latency_ms|ms }} |
+{% endfor %}
+{% if not services %}
+_No availability data for this period._
+{% endif %}
+
+Health score = availability weighted backend 30 · PostgreSQL 25 · Solr 15 · frontend 15 · nginx 10 · others 5.
+
+{% endif %}
+{% if 'latency' in sections %}
+## ⏱️ Response times
+
+| Check | p50 | p95 | Max | Failures | Thresholds (warn / crit) | Status |
+|---|---:|---:|---:|---:|---|---|
+{% for key, lat in latency.items() %}
+| {{ lat.label }} (`{{ lat.check }}`) | {{ lat.p50|ms }} | {{ lat.p95|ms }} | {{ lat.max|ms }} | {{ lat.failures }} | {% if lat.thresholds %}{{ lat.thresholds.warning|ms }} / {{ lat.thresholds.critical|ms }}{% else %}—{% endif %} | {{ lat.status|status_label if lat.status else '—' }} |
+{% endfor %}
+{% if not latency %}
+_No response-time checks are enabled._
+{% endif %}
+
+{% endif %}
+{% if 'alerts' in sections %}
+## ⚠️ Alerts
+
+{{ alert_stats.opened }} alerts opened ({{ alert_stats.critical }} critical, {{ alert_stats.warning }} warning){% if alert_stats.still_open %}, {{ alert_stats.still_open }} still open{% endif %}{% if alert_stats.mean_time_to_resolve_s %}; mean time to resolve {{ alert_stats.mean_time_to_resolve_s|duration }}{% endif %}.
+
+{% if alerts %}
+| Opened | Severity | Alert | Component | Duration | Status |
+|---|---|---|---|---:|---|
+{% for a in alerts[:max_alert_rows] %}
+| {{ a.opened_ts|datetime }} | {{ a.severity|severity_label }} | {{ a.title|mdcell }} | {{ a.component_label }} | {{ a.duration_s|duration }} | {{ 'open' if a.status == 'open' else 'resolved' }}{% if a.acked_ts %}, acked{% endif %} |
+{% endfor %}
+{% if alerts|length > max_alert_rows %}
+_… and {{ alerts|length - max_alert_rows }} more (see the JSON report)._
+{% endif %}
+{% else %}
+_No alerts in this period._
+{% endif %}
+
+{% endif %}
+{% if 'incidents' in sections or 'alerts' in sections %}
+## 🧭 Incidents
+
+{% for inc in incidents %}
+### #{{ inc.id }} {{ inc.title|mdcell }} — {{ inc.duration_s|duration }}{% if inc.status == 'open' %} (still open){% endif %}
+
+{% if inc.hypothesis and inc.hypothesis != inc.title %}Hypothesis: {{ inc.hypothesis|mdcell }}
+{% endif %}
+Started {{ inc.started_ts|datetime }}{% if inc.ended_ts %}, resolved {{ inc.ended_ts|datetime }}{% endif %}.{% if inc.affected %} Affected: {{ inc.affected|join(', ') }}.{% endif %}
+
+{% for step in inc.sequence %}
+- {{ step.ts|clock }} {{ step.text|mdcell }}{% if step.severity %} ({{ step.severity }}){% endif %}
+{% endfor %}
+
+{% endfor %}
+{% if not incidents %}
+_No incidents in this period._
+{% endif %}
+
+{% endif %}
+{% if 'repository' in sections %}
+## 🗄️ Repository and storage
+
+{% if repository.enabled and repository.now %}
+| Counter | Now | Change this period | Per day |
+|---|---:|---:|---:|
+| Items | {{ repository.now['items']|number }} | {{ repository.delta['items']|delta }} | {{ repository.growth_per_day['items']|number(1) }} |
+| Bitstreams | {{ repository.now.bitstreams|number }} | {{ repository.delta.bitstreams|delta }} | {{ repository.growth_per_day.bitstreams|number(1) }} |
+| Communities | {{ repository.now.communities|number }} | {{ repository.delta.communities|delta }} | — |
+| Collections | {{ repository.now.collections|number }} | {{ repository.delta.collections|delta }} | — |
+| Database size | {{ repository.now.db_size|bytes }} | {{ repository.delta.db_size|delta('bytes') }} | {{ repository.growth_per_day.db_size|bytes }} |
+| Assetstore | {{ repository.now.assetstore_bytes|bytes }} | {{ repository.delta.assetstore_bytes|delta('bytes') }} | {{ repository.growth_per_day.assetstore_bytes|bytes }} |
+{% elif repository.enabled %}
+_No repository snapshots in this period yet._
+{% else %}
+_The Repository module is off; storage forecasts come from the server samples._
+{% endif %}
+
+{% if repository.forecasts %}
+| Storage | Free | Total | Growth per day | Full in |
+|---|---:|---:|---:|---:|
+{% for fc in repository.forecasts %}
+| {{ fc.label }} | {{ fc.free|bytes }} | {{ fc.total|bytes }} | {{ fc.growth_per_day|bytes if fc.growth_per_day else '—' }} | {{ fc.days_until_full|days }} |
+{% endfor %}
+{% endif %}
+
+{% endif %}
+{% if 'logs' in sections %}
+## 📜 Logs
+
+{% if logs.enabled %}
+About {{ logs.totals.errors_estimate|number }} errors in the period (peak {{ logs.totals.peak_per_window|number }} per {{ logs.window_minutes }}-minute window; {{ logs.totals.windows_over_warning }} windows over the warning threshold){% if logs.trend.up %} — **trending up** ({{ logs.trend.first_half }} → {{ logs.trend.second_half }}){% endif %}.
+
+| Log | Errors (est.) | Peak / window | Windows over warning | Path |
+|---|---:|---:|---:|---|
+{% for f in logs.files %}
+| {{ f.label }} | {{ f.errors_estimate|number }} | {{ f.peak_per_window|number }} | {{ f.windows_over_warning }} | `{{ f.path }}`{% if f.missing %} (missing){% endif %} |
+{% endfor %}
+
+{% if logs.top_errors %}
+| Top errors | Seen | Source |
+|---|---:|---|
+{% for e in logs.top_errors %}
+| {{ e.text|mdcell }} | {{ e.count }} | {{ e.source }} |
+{% endfor %}
+{% endif %}
+{% else %}
+_The Logs module is off._
+{% endif %}
+
+{% endif %}
+{% if 'security' in sections %}
+## 🛡️ Security
+
+{% if not security.enabled %}
+_The Security module is off._
+{% elif security.verdict == 'no_data' %}
+_No security check has run yet._
+{% else %}
+Checked {{ security.checked_ts|datetime }}.
+
+{% if security.findings %}
+{% for f in security.findings %}
+- **{{ f.label }}**: {{ f.message|mdcell }}
+{% if f.hint %}
+
+  {{ f.hint|mdcell }}
+
+{% endif %}
+{% endfor %}
+
+{% elif security.verdict == 'clear' %}
+_No security findings._
+
+{% else %}
+_The last security check gave no result: {{ security.reason|mdcell }}_
+
+{% endif %}
+{% if security.earlier %}
+Earlier in this period:
+
+{% for e in security.earlier %}
+- **{{ e.label }}**: {{ e.message|mdcell }} (warned in {{ e.warnings }} of {{ e.checks }} checks, last {{ e.last_ts|datetime }})
+{% endfor %}
+
+{% endif %}
+{% if security.rungs %}
+| Check | Status | Result | Warnings this period |
+|---|---|---|---:|
+{% for r in security.rungs %}
+| {{ r.label }} | {{ 'Note' if r.informational else r.status|status_label }} | {{ (r.message or '—')|mdcell }} | {% if r.period_checks %}{{ r.period_warnings }} of {{ r.period_checks }}{% else %}—{% endif %} |
+{% endfor %}
+
+{% endif %}
+{% if security.ports %}
+Open ports: {{ security.port_counts.listening|number }} listening · {{ security.port_counts.reachable|number }} reachable from the network · {{ security.port_counts.exposed|number }} unexpected.
+
+| Port | Program | Address | Reachable | Expected | Verdict |
+|---:|---|---|---|---|---|
+{% for port in security.ports[:max_port_rows] %}
+| {{ port.port }}{% if port.proto != 'tcp' %}/{{ port.proto }}{% endif %} | {{ (port.process or '—')|mdcell }} | {{ (port.addrs|join(', ') if port.addrs else '—')|mdcell }} | {{ 'from the network' if port.public else 'this server only' }} | {{ port.expected|expect_label }} | {{ port.verdict|verdict_label }} |
+{% endfor %}
+{% if security.ports|length > max_port_rows %}
+
+_… and {{ security.ports|length - max_port_rows }} more (see the JSON report)._
+{% endif %}
+
+{% endif %}
+{% if security.software %}
+| Software | Version | Supported until | Status | Note |
+|---|---|---|---|---|
+{% for sw in security.software %}
+| {{ sw.name|mdcell }} | {{ (sw.version or '—')|mdcell }} | {{ sw.until or '—' }} | {{ sw.status|support_label }} | {{ (sw.note or '—')|mdcell }} |
+{% endfor %}
+
+{% endif %}
+{% endif %}
+
+{% endif %}
+{% if 'recommendations' in sections %}
+## 💡 Recommendations
+
+{% for r in recommendations %}
+- **{{ r.severity|severity_label }}** — {{ r.text }}
+{% endfor %}
+
+{% endif %}
+---
+Generated by DSpace Sentinel v{{ meta.sentinel_version }} on {{ meta.hostname }} at {{ meta.generated_ts|datetime }}. Sentinel only observes; nothing in this report changed the server.

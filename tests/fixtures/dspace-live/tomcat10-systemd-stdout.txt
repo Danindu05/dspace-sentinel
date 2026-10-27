@@ -1,0 +1,79 @@
+# port-taken: Tomcat 10.1.55 (Ubuntu 24.04 tomcat10 jars) started while its HTTP port was taken, ConsoleHandler + org.apache.juli.SystemdFormatter under systemd
+<6>Initializing ProtocolHandler ["http-nio-9865"]
+<2>Failed to initialize component [Connector["http-nio-9865"]]
+<2>org.apache.catalina.LifecycleException: Protocol handler initialization failed
+<2>    at org.apache.catalina.connector.Connector.initInternal(Connector.java:1084)
+<2>    at org.apache.catalina.util.LifecycleBase.init(LifecycleBase.java:122)
+<2>    at org.apache.catalina.core.StandardService.initInternal(StandardService.java:520)
+<2>    at org.apache.catalina.util.LifecycleBase.init(LifecycleBase.java:122)
+<2>    at org.apache.catalina.core.StandardServer.initInternal(StandardServer.java:955)
+<2>    at org.apache.catalina.util.LifecycleBase.init(LifecycleBase.java:122)
+<2>    at org.apache.catalina.util.LifecycleBase.start(LifecycleBase.java:155)
+<2>    at org.apache.catalina.startup.Tomcat.start(Tomcat.java:436)
+<2>    at PortTaken.main(PortTaken.java:14)
+<2>Caused by: java.net.BindException: Address already in use
+<2>    at java.base/sun.nio.ch.Net.bind0(Native Method)
+<2>    at java.base/sun.nio.ch.Net.bind(Net.java:567)
+<2>    at java.base/sun.nio.ch.ServerSocketChannelImpl.netBind(ServerSocketChannelImpl.java:337)
+<2>    at java.base/sun.nio.ch.ServerSocketChannelImpl.bind(ServerSocketChannelImpl.java:294)
+<2>    at org.apache.tomcat.util.net.NioEndpoint.initServerSocket(NioEndpoint.java:264)
+<2>    at org.apache.tomcat.util.net.NioEndpoint.bind(NioEndpoint.java:219)
+<2>    at org.apache.tomcat.util.net.AbstractEndpoint.bindWithCleanup(AbstractEndpoint.java:1434)
+<2>    at org.apache.tomcat.util.net.AbstractEndpoint.init(AbstractEndpoint.java:1447)
+<2>    at org.apache.coyote.AbstractProtocol.init(AbstractProtocol.java:932)
+<2>    at org.apache.coyote.http11.AbstractHttp11Protocol.init(AbstractHttp11Protocol.java:82)
+<2>    at org.apache.catalina.connector.Connector.initInternal(Connector.java:1082)
+<2>    ... 8 more
+<2>
+<6>Starting service [Tomcat]
+<6>Starting Servlet engine: [Apache Tomcat/10.1.55 (Ubuntu)]
+<6>Pausing ProtocolHandler ["http-nio-9865"]
+<6>Stopping service [Tomcat]
+<6>Stopping ProtocolHandler ["http-nio-9865"]
+<6>Destroying ProtocolHandler ["http-nio-9865"]
+# start-failed: a LifecycleBase start failure (LifecycleException caused by a 15-frame BindException) through the same SystemdFormatter
+<2>Failed to start component [Connector["http-nio-8080"]]
+<2>java.lang.Exception: org.apache.catalina.LifecycleException: Protocol handler start failed
+<2>    at Real.main(Real.java:10)
+<2>Caused by: java.net.BindException: Address already in use
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.bind(Real.java:3)
+<2>    at Real.main(Real.java:9)
+<2>
+# jar-scan: a StandardJarScanner WARNING with a Throwable (a jar that is gone) through the same SystemdFormatter
+<4>Failed to scan [file:/usr/share/java/tomcat10-el-api.jar] from classloader hierarchy
+<4>java.nio.file.NoSuchFileException: /usr/share/java/tomcat10-el-api.jar
+<4>    at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:92)
+<4>    at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+<4>    at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+<4>    at java.base/sun.nio.fs.UnixFileAttributeViews$Basic.readAttributes(UnixFileAttributeViews.java:55)
+<4>    at java.base/sun.nio.fs.UnixFileSystemProvider.readAttributes(UnixFileSystemProvider.java:148)
+<4>    at java.base/sun.nio.fs.LinuxFileSystemProvider.readAttributes(LinuxFileSystemProvider.java:99)
+<4>    at java.base/java.nio.file.Files.readAttributes(Files.java:1851)
+<4>    at java.base/java.util.zip.ZipFile$Source.get(ZipFile.java:1432)
+<4>    at java.base/java.util.zip.ZipFile$CleanableResource.<init>(ZipFile.java:717)
+<4>    at java.base/java.util.zip.ZipFile.<init>(ZipFile.java:251)
+<4>    at java.base/java.util.zip.ZipFile.<init>(ZipFile.java:180)
+<4>    at java.base/java.util.jar.JarFile.<init>(JarFile.java:346)
+<4>    at java.base/java.util.jar.JarFile.<init>(JarFile.java:317)
+<4>    at java.base/java.util.jar.JarFile.<init>(JarFile.java:256)
+<4>    at Warnings.main(Warnings.java:10)
+<4>
+# thread-leak: a WebappClassLoaderBase WARNING whose message carries the thread's stack (no Throwable) through the same SystemdFormatter
+<4>The web application [server] appears to have started a thread named [Timer-0] but has failed to stop it. This is very likely to create a memory leak. Stack trace of thread:
+ java.base@17.0.20.1/java.lang.Object.wait(Native Method)
+ java.base@17.0.20.1/java.util.TimerThread.mainLoop(Timer.java:563)
+ java.base@17.0.20.1/java.util.TimerThread.run(Timer.java:516)
